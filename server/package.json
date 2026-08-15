@@ -1,0 +1,47 @@
+{
+  "name": "happy-hair-backend",
+  "version": "1.0.0",
+  "description": "Happy Hair Nutrition Backend Server",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "build": "npx prisma generate",
+    "postinstall": "npx prisma generate",
+    "db:migrate": "npx prisma migrate deploy",
+    "db:push": "npx prisma db push",
+    "db:seed": "node prisma/seed.js",
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [],
+  "author": "MG Living",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.19.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.0.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.14",
+    "prisma": "^5.22.0",
+    "supertest": "^7.2.2"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
+}

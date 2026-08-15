@@ -1,0 +1,407 @@
+/* Full Page Overlay */
+.zomato-checkout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #f8f9fa;
+  z-index: 999999;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.zomato-checkout-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Main Container */
+.zomato-checkout-container {
+  width: 100%;
+  max-width: 1200px;
+  min-height: 100vh;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.zomato-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 40px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.z-brand {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #c99339;
+  letter-spacing: -0.5px;
+}
+.z-secure-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #166534;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: #dcfce7;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+.z-close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.z-close-btn:hover { color: #000; }
+
+/* Split Layout */
+.zomato-content-split {
+  display: flex;
+  flex: 1;
+  padding: 40px;
+  gap: 40px;
+}
+
+/* Left Panel */
+.z-left-panel {
+  flex: 1;
+  max-width: 650px;
+}
+.z-page-title {
+  font-size: 2rem;
+  color: #111;
+  margin: 0 0 8px 0;
+}
+.z-page-subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin: 0 0 30px 0;
+}
+
+/* Form Sections */
+.z-section {
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  margin-bottom: 24px;
+}
+.z-section-title {
+  font-size: 1.1rem;
+  color: #111;
+  margin: 0 0 20px 0;
+  font-weight: 700;
+}
+
+/* Inputs */
+.z-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.z-input-group {
+  position: relative;
+  flex: 1;
+  margin-bottom: 16px;
+}
+.z-row .z-input-group {
+  margin-bottom: 0;
+}
+.z-input-group input {
+  width: 100%;
+  padding: 24px 16px 8px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #111;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+.z-input-group input:focus {
+  border-color: #c99339;
+  box-shadow: 0 0 0 3px rgba(201, 147, 57, 0.1);
+}
+.z-input-group.z-readonly input {
+  background: #f9f9f9;
+  color: #555;
+  border-color: #eee;
+}
+.z-input-group label {
+  position: absolute;
+  left: 16px;
+  top: 18px;
+  color: #777;
+  font-size: 0.95rem;
+  pointer-events: none;
+  transition: 0.2s ease all;
+}
+.z-input-group input:focus ~ label,
+.z-input-group input:not(:placeholder-shown) ~ label {
+  top: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #888;
+}
+.z-input-group input:focus ~ label {
+  color: #c99339;
+}
+
+/* Pincode Specifics */
+.z-pincode-group {
+  position: relative;
+}
+.error-input {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+}
+.z-pincode-error {
+  position: absolute;
+  right: 16px;
+  top: 18px;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.z-pincode-spinner {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ddd;
+  border-top-color: #c99339;
+  border-radius: 50%;
+  animation: z-spin 1s linear infinite;
+}
+@keyframes z-spin { to { transform: rotate(360deg); } }
+
+/* Payment Cards */
+.z-payment-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.z-payment-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff;
+}
+.z-payment-card:hover {
+  border-color: #bbb;
+}
+.z-payment-card.active {
+  border-color: #c99339;
+  background: #fffdf8;
+  box-shadow: 0 2px 8px rgba(201, 147, 57, 0.1);
+}
+.z-payment-card input {
+  margin-top: 4px;
+  margin-right: 16px;
+  accent-color: #c99339;
+  width: 18px;
+  height: 18px;
+}
+.z-payment-content {
+  flex: 1;
+}
+.z-payment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.z-payment-name {
+  font-weight: 600;
+  color: #111;
+  font-size: 1rem;
+}
+.z-payment-badge {
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.z-payment-fee {
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.z-payment-desc {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+/* Right Panel: Order Summary */
+.z-right-panel {
+  width: 400px;
+  flex-shrink: 0;
+}
+.z-summary-card {
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  position: sticky;
+  top: 100px;
+}
+.z-summary-title {
+  margin: 0 0 24px 0;
+  font-size: 1.2rem;
+  color: #111;
+}
+.z-prod-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.z-p-img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #eee;
+}
+.z-p-title {
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.z-p-meta {
+  font-size: 0.85rem;
+  color: #666;
+}
+.z-divider {
+  height: 1px;
+  background: #eee;
+  margin: 20px 0;
+}
+.z-price-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  color: #444;
+}
+.z-discount {
+  color: #166534;
+  font-weight: 600;
+}
+.z-total {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 30px;
+}
+.z-submit-btn {
+  width: 100%;
+  padding: 18px;
+  background: #c99339;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(201, 147, 57, 0.3);
+}
+.z-submit-btn:hover:not(:disabled) {
+  background: #b58433;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(201, 147, 57, 0.4);
+}
+.z-submit-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.z-trust-footer {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 1024px) {
+  .zomato-content-split {
+    flex-direction: column;
+    padding: 24px;
+    gap: 30px;
+  }
+  .z-left-panel {
+    max-width: 100%;
+  }
+  .z-right-panel {
+    width: 100%;
+  }
+  .z-summary-card {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .zomato-header {
+    padding: 16px 20px;
+  }
+  .z-brand {
+    font-size: 1.2rem;
+  }
+  .z-secure-badge {
+    display: none; /* Hide on small screens to save space */
+  }
+  .zomato-content-split {
+    padding: 16px;
+  }
+  .z-section {
+    padding: 20px;
+  }
+  .z-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .z-page-title {
+    font-size: 1.5rem;
+  }
+  .z-submit-btn {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 0;
+    padding: 20px;
+    z-index: 100;
+  }
+  .zomato-checkout-overlay {
+    padding-bottom: 80px; /* Space for sticky button */
+  }
+}

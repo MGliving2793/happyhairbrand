@@ -1,0 +1,148 @@
+*** Begin Patch
+*** Update File: server/src/routes/debug.routes.js
+@@
+-const express = require('express');
+-const router = express.Router();
+-
+-// Lightweight debug logging endpoint for client-side events (temporary)
+-// Logs small preview of event to server logs. Safe: does not store secrets.
+-router.post('/log', express.json({ limit: '10kb' }), (req, res) => {
+-  try {
+-    const info = {
+-      at: new Date().toISOString(),
+-      ip: req.ip,
+-      ua: req.get('User-Agent'),
+-      bodyPreview: typeof req.body === 'object' ? JSON.stringify(req.body).slice(0, 1000) : String(req.body).slice(0, 1000)
+-    };
+-    console.log('[CLIENT-DEBUG]', info);
+-  } catch (e) {
+-    console.warn('[CLIENT-DEBUG] logging error', e && e.message);
+-  }
+-  res.status(204).end();
+-});
+-
+-module.exports = router;
++const express = require('express');
++const router = express.Router();
++
++// Lightweight debug logging endpoint for client-side events (temporary)
++// Logs small preview of event to server logs. Safe: does not store secrets.
++router.post('/log', express.json({ limit: '10kb' }), (req, res) => {
++  try {
++    const info = {
++      at: new Date().toISOString(),
++      ip: req.ip,
++      ua: req.get('User-Agent'),
++      bodyPreview: typeof req.body === 'object' ? JSON.stringify(req.body).slice(0, 1000) : String(req.body).slice(0, 1000)
++    };
++    console.log('[CLIENT-DEBUG]', info);
++  } catch (e) {
++    console.warn('[CLIENT-DEBUG] logging error', e && e.message);
++  }
++  res.status(204).end();
++});
++
++// Test checkout route - creates a temporary Cashfree session (does NOT persist an order)
++// Use: GET /api/debug/test-checkout?amount=10&email=test@example.com
++const cashfreeIntegration = require('../integrations/cashfree');
++router.get('/test-checkout', async (req, res) => {
++  try {
++    const amount = parseFloat(req.query.amount) || 1.0;
++    const reqHost = `${req.protocol}://${req.get('host')}`;
++    // Minimal temp order object (not stored in DB)
++    const tempOrder = {
++      id: `test_${Date.now()}`,
++      total: amount,
++      phone: req.query.phone || '9999999999',
++      customer_name: req.query.name || 'Test User',
++      email: req.query.email || 'test@example.com'
++    };
++
++    const CF_ENV = process.env.CASHFREE_ENV || 'sandbox';
++    const { cfOrderId, paymentSessionId } = await cashfreeIntegration.createOrder(tempOrder, reqHost);
++    if (!paymentSessionId) return res.status(500).send('Failed to generate Cashfree session');
++
++    const cashfreeJsSdkUrl = 'https://sdk.cashfree.com/js/v3/cashfree.js';
++    const html = `<!doctype html>
++<html lang="en">
++<head>
++  <meta charset="utf-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1">
++  <title>Test Checkout</title>
++  <script src="${cashfreeJsSdkUrl}"></script>
++  <style>body{font-family:sans-serif;background:#0a0a0a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0} .loader{border:4px solid rgba(255,255,255,0.1);border-top:4px solid #c99339;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}</style>
++</head>
++<body>
++  <div class="loader"></div>
++  <h2 style="margin-top:16px">Initializing Test Checkout...</h2>
++  <p style="color:#bbb">Amount: ₹${amount} — Environment: ${CF_ENV}</p>
++  <script>
++    try {
++      const cashfree = Cashfree({ mode: "${CF_ENV}" });
++      window.onload = function(){
++        setTimeout(()=>{
++          cashfree.checkout({ paymentSessionId: "${paymentSessionId}" });
++        }, 400);
++      };
++    } catch(e) {
++      console.error('SDK init failed', e);
++      document.body.insertAdjacentHTML('beforeend', '<pre style="color:#f88">SDK init failed: '+e.message+'</pre>');
++    }
++  </script>
++</body>
++</html>`;
++
++    res.send(html);
++  } catch (err) {
++    console.error('[TEST-CHECKOUT] Error creating test checkout:', err.response?.data || err.message || err);
++    res.status(500).send('Failed to create test checkout session');
++  }
++});
++
++// UPI QR generator - returns a simple HTML page with a QR code for your MERCHANT_UPI_ID
++router.get('/upi-qr', (req, res) => {
++  try {
++    const upi = process.env.MERCHANT_UPI_ID || 'murthyjio7@ibl';
++    const name = process.env.MERCHANT_NAME || 'Happy Hair';
++    const amount = req.query.amount ? req.query.amount : '';
++    const amParam = amount ? `&am=${encodeURIComponent(amount)}` : '';
++    const upiUri = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent(name)}${amParam}&cu=INR`;
++    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUri)}`;
++    const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UPI QR</title></head><body style="font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;background:#fff;color:#111"><h2>UPI QR</h2><img src="${qrSrc}" alt="UPI QR"><p style="word-break:break-all;max-width:320px">${upiUri}</p><p><a href="${upiUri}">Open UPI App</a></p></body></html>`;
++    res.send(html);
++  } catch (e) {
++    console.error('[UPI-QR] error', e.message);
++    res.status(500).send('Failed to generate UPI QR');
++  }
++});
++
++// QR Scanner page - simple camera scanner using html5-qrcode (CDN)
++router.get('/qr-scanner', (req, res) => {
++  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QR Scanner</title><script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script></head><body style="font-family:sans-serif;margin:0;padding:20px;background:#fafafa;color:#111;">
++  <h2>QR Scanner</h2>
++  <div id="reader" style="width:300px"></div>
++  <div style="margin-top:12px"><button id="startBtn">Start</button> <button id="stopBtn">Stop</button></div>
++  <pre id="result" style="background:#000;color:#0f0;padding:10px;margin-top:12px;min-height:40px;max-width:320px;overflow:auto"></pre>
++  <script>
++    const html5QrcodeScanner = new Html5Qrcode("reader");
++    document.getElementById('startBtn').addEventListener('click', ()=>{
++      Html5Qrcode.getCameras().then(cameras=>{
++        const camId = (cameras && cameras.length) ? cameras[0].id : null;
++        if(!camId){ alert('No camera found'); return; }
++        html5QrcodeScanner.start(camId, { fps: 10, qrbox: 250 }, qrCodeMessage=>{
++          document.getElementById('result').textContent = qrCodeMessage;
++        }, errorMessage => {
++          // ignore
++        }).catch(err => { console.error(err); alert('Could not start scanner: '+err.message); });
++      }).catch(err=>{ alert('Camera access error: '+err.message); });
++    });
++    document.getElementById('stopBtn').addEventListener('click', ()=>{
++      html5QrcodeScanner.stop().then(()=>{ document.getElementById('result').textContent = 'Stopped'; }).catch(e=>console.warn(e));
++    });
++  </script>
++</body></html>`;
++  res.send(html);
++});
++
++module.exports = router;
+*** End Patch

@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?  @default("")
+  price       Float
+  image_url   String?
+  stock       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reviews     Review[]
+}
+
+model Order {
+  id               Int      @id @default(autoincrement())
+  customer_name    String
+  email            String   @default("")
+  phone            String   @default("")
+  address          String   @default("")
+  city             String   @default("")
+  state            String   @default("")
+  pincode          String   @default("")
+  pay_mode         String   @default("PREPAID")
+  total            Float
+  status           String   @default("PENDING")
+  payment_receipt  String?
+  utr              String?
+  order_no         String?
+  cart_details     String   @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  coupon_code      String?
+  discount_applied Float    @default(0)
+}
+
+model Review {
+  id            Int      @id @default(autoincrement())
+  customer_name String
+  rating        Int
+  comment       String
+  is_published  Boolean  @default(false)
+  productId     Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}

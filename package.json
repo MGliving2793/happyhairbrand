@@ -1,0 +1,26 @@
+{
+  "name": "happy-hair-nutrition-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix server start",
+    "dev": "npm --prefix server run dev",
+    "build": "npm --prefix server run build && npm --prefix frontend run build",
+    "test": "npm --prefix server test",
+    "postinstall": "npm --prefix frontend install && npm --prefix server install && npx prisma generate --schema=server/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.19.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^6.9.13",
+    "prisma": "^5.22.0",
+    "zod": "^4.4.3"
+  }
+}

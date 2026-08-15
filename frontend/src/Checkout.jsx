@@ -374,7 +374,7 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
                 <span>₹{total}</span>
               </div>
 
-              <button type="button" onClick={submitOrder} className="z-submit-btn" disabled={loading || pincodeLoading}>
+              <button type="button" onClick={submitOrder} className="z-submit-btn" disabled={loading}>
                 {loading ? 'Processing Securely...' : (isCOD ? `Place Order (COD ₹${total})` : `Pay ₹${total}`)}
               </button>
               {errors.form && <div className="z-form-error">{errors.form}</div>}

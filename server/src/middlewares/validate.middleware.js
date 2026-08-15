@@ -72,7 +72,7 @@ const normalizePaymentMode = (value) => {
 
 const paymentModeSchema = z.preprocess(
   (value) => normalizePaymentMode(value),
-  z.enum(['PREPAID', 'COD', 'UPI']).optional()
+  z.enum(['PREPAID', 'COD', 'UPI', 'PENDING']).optional()
 );
 
 // Zod schemas for different routes

@@ -199,87 +199,150 @@ const renderPaymentSelectionPage = async (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <title>Secure Payment Portal - Happy Hair</title>
+      <title>Select Payment Method - Happy Hair</title>
       <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
       <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: #f9fafb; color: #111827; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-        .portal-card { background: #fff; width: 100%; max-width: 420px; border-radius: 24px; padding: 32px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08); text-align: center; }
-        .logo { font-size: 24px; font-weight: 800; color: #111827; margin-bottom: 8px; }
-        .amount { font-size: 42px; font-weight: 800; color: #111827; margin: 24px 0 8px; letter-spacing: -1px; }
-        .amount-label { color: #6b7280; font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
-        .divider { height: 1px; background: #e5e7eb; margin: 32px 0; }
-        .btn { width: 100%; padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
-        .btn-prepaid { background: #111827; color: #fff; box-shadow: 0 4px 12px rgba(17,24,39,0.2); }
-        .btn-prepaid:hover { background: #000; transform: translateY(-2px); }
-        .btn-cod { background: #f3f4f6; color: #374151; }
-        .btn-cod:hover { background: #e5e7eb; }
-        .secure-badge { margin-top: 24px; color: #9ca3af; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .cod-fee { font-size: 13px; color: #6b7280; font-weight: 500; margin-top: -8px; margin-bottom: 24px; display: block; }
-        .error { color: #dc2626; font-size: 14px; margin-top: 16px; display: none; background: #fef2f2; padding: 12px; border-radius: 8px; }
+        body { background: #fbf9f6; color: #3d2f25; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .portal-card { background: #fff; width: 100%; max-width: 600px; border-radius: 12px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); border: 1px solid #f0ebe1; }
+        
+        .header-title { font-size: 16px; font-weight: 700; color: #4a3b32; margin-bottom: 20px; }
+        
+        .payment-options { display: flex; gap: 16px; margin-bottom: 32px; }
+        @media (max-width: 500px) { .payment-options { flex-direction: column; } }
+        
+        .radio-card { flex: 1; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; background: #fafaf9; display: flex; flex-direction: column; }
+        .radio-card.active { border-color: #d4af37; background: #fffdf7; }
+        
+        .radio-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .custom-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; }
+        .radio-card.active .custom-radio { border-color: #d4af37; background: #d4af37; }
+        .custom-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #fff; transform: scale(0); transition: transform 0.2s; }
+        .radio-card.active .custom-radio::after { transform: scale(1); }
+        
+        .icon { font-size: 20px; }
+        .title { font-size: 16px; font-weight: 600; color: #4a3b32; }
+        
+        .desc { font-size: 13px; color: #6b7280; margin-bottom: 12px; line-height: 1.4; }
+        
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; width: fit-content; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-orange { background: #ffedd5; color: #9a3412; }
+        
+        .continue-btn { width: 100%; padding: 18px; border-radius: 12px; background: #523b31; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; border: none; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .continue-btn:hover { background: #3f2d25; }
+        .continue-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        
+        .error { color: #dc2626; font-size: 14px; margin-top: 16px; display: none; background: #fef2f2; padding: 12px; border-radius: 8px; text-align: center; }
+        
+        /* Order Summary visual */
+        .summary-box { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb; }
+        .summary-title { font-size: 22px; font-weight: 600; color: #4a3b32; margin-bottom: 20px; }
+        .summary-row { display: flex; justify-content: space-between; font-size: 15px; color: #4b5563; margin-bottom: 12px; }
+        .summary-row.total { font-size: 20px; font-weight: 700; color: #4a3b32; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+        .gold-text { color: #d4af37; font-size: 28px; }
       </style>
     </head>
     <body>
       <div class="portal-card">
-        <div class="logo">Happy Hair</div>
-        <div class="amount-label">Amount to Pay</div>
-        <div class="amount">₹${order.total}</div>
         
-        <div class="divider"></div>
+        <div class="summary-box">
+          <h2 class="summary-title">Order Summary</h2>
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span>₹${order.total}</span>
+          </div>
+          <div class="summary-row">
+            <span>Shipping</span>
+            <span>FREE</span>
+          </div>
+          <div class="summary-row total">
+            <span>Total</span>
+            <span class="gold-text">₹<span id="display-total">${order.total}</span></span>
+          </div>
+        </div>
 
-        <button id="prepaid-btn" class="btn btn-prepaid">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-          Pay Now (UPI, Cards)
-        </button>
+        <div class="header-title">Select Payment Method *</div>
         
-        <button id="cod-btn" class="btn btn-cod">
-          📦 Cash on Delivery
-        </button>
-        <span class="cod-fee">Additional ₹20 fee applies</span>
+        <div class="payment-options">
+          <div class="radio-card active" id="card-prepaid" onclick="selectPayment('PREPAID')">
+            <div class="radio-header">
+              <div class="custom-radio"></div>
+              <span class="icon">💳</span>
+              <span class="title">Online Payment</span>
+            </div>
+            <div class="desc">Pay now via UPI, Cards, Net Banking</div>
+            <div class="badge badge-green">✓ Instant Confirmation</div>
+          </div>
+          
+          <div class="radio-card" id="card-cod" onclick="selectPayment('COD')">
+            <div class="radio-header">
+              <div class="custom-radio"></div>
+              <span class="icon">📦</span>
+              <span class="title">Cash on Delivery</span>
+            </div>
+            <div class="desc">Pay when you receive your order</div>
+            <div class="badge badge-orange">+₹25 COD Charges</div>
+          </div>
+        </div>
         
         <div id="error-msg" class="error"></div>
-
-        <div class="secure-badge">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-          100% Secure Payments
-        </div>
+        
+        <button id="continue-btn" class="continue-btn">Continue to Payment</button>
       </div>
 
       <script>
         const CF_ENV = '${CF_ENV}';
         const sessionId = '${paymentSessionId}';
         const orderId = '${order.id}';
+        const baseTotal = ${order.total};
+        let selectedMethod = 'PREPAID';
         
-        document.getElementById('prepaid-btn').addEventListener('click', () => {
-          if (!sessionId) {
-            document.getElementById('error-msg').innerText = 'Payment session unavailable. Please try COD.';
-            document.getElementById('error-msg').style.display = 'block';
-            return;
-          }
-          const cf = Cashfree({ mode: CF_ENV });
-          cf.checkout({ paymentSessionId: sessionId, redirectTarget: "_self" });
-        });
-
-        document.getElementById('cod-btn').addEventListener('click', async () => {
-          const btn = document.getElementById('cod-btn');
-          btn.innerHTML = '<svg class="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Processing...';
-          btn.disabled = true;
-          document.getElementById('prepaid-btn').disabled = true;
+        function selectPayment(method) {
+          selectedMethod = method;
+          document.getElementById('card-prepaid').classList.remove('active');
+          document.getElementById('card-cod').classList.remove('active');
           
-          try {
-            const res = await fetch('/api/orders/' + orderId + '/pay-cod', { method: 'POST' });
-            if (res.ok) {
-              window.location.href = '/api/orders/status/' + orderId;
-            } else {
-              throw new Error('Failed to process COD');
+          if (method === 'PREPAID') {
+            document.getElementById('card-prepaid').classList.add('active');
+            document.getElementById('display-total').innerText = baseTotal;
+          } else {
+            document.getElementById('card-cod').classList.add('active');
+            document.getElementById('display-total').innerText = baseTotal + 25;
+          }
+        }
+
+        document.getElementById('continue-btn').addEventListener('click', async () => {
+          const btn = document.getElementById('continue-btn');
+          
+          if (selectedMethod === 'PREPAID') {
+            if (!sessionId) {
+              document.getElementById('error-msg').innerText = 'Payment session unavailable. Please try COD.';
+              document.getElementById('error-msg').style.display = 'block';
+              return;
             }
-          } catch(e) {
-            document.getElementById('error-msg').innerText = e.message;
-            document.getElementById('error-msg').style.display = 'block';
-            btn.innerHTML = '📦 Cash on Delivery';
-            btn.disabled = false;
-            document.getElementById('prepaid-btn').disabled = false;
+            btn.innerHTML = 'Processing...';
+            btn.disabled = true;
+            const cf = Cashfree({ mode: CF_ENV });
+            cf.checkout({ paymentSessionId: sessionId, redirectTarget: "_self" });
+          } else {
+            btn.innerHTML = 'Processing...';
+            btn.disabled = true;
+            
+            try {
+              const res = await fetch('/api/orders/' + orderId + '/pay-cod', { method: 'POST' });
+              if (res.ok) {
+                window.location.href = '/api/orders/status/' + orderId;
+              } else {
+                throw new Error('Failed to process COD');
+              }
+            } catch(e) {
+              document.getElementById('error-msg').innerText = e.message;
+              document.getElementById('error-msg').style.display = 'block';
+              btn.innerHTML = 'Continue to Payment';
+              btn.disabled = false;
+            }
           }
         });
       </script>
@@ -303,8 +366,8 @@ const processCodPayment = async (req, res) => {
       return res.status(400).json({ error: 'Order already processed' });
     }
 
-    // Add 20rs COD fee
-    const updatedTotal = (order.total || 0) + 20;
+    // Add 25rs COD fee
+    const updatedTotal = (order.total || 0) + 25;
 
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },

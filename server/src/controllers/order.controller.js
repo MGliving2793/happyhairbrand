@@ -178,7 +178,7 @@ const renderPaymentSelectionPage = async (req, res) => {
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
     if (!order) return res.status(404).send('Order not found');
 
-    if (order.status !== 'Pending' && order.status !== 'Payment_Failed') {
+    if (order.status.toUpperCase() !== 'PENDING' && order.status.toUpperCase() !== 'PAYMENT_FAILED') {
       return res.redirect(`/api/orders/status/${order.id}`);
     }
 
@@ -362,7 +362,7 @@ const processCodPayment = async (req, res) => {
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
-    if (order.status !== 'Pending') {
+    if (order.status.toUpperCase() !== 'PENDING') {
       return res.status(400).json({ error: 'Order already processed' });
     }
 

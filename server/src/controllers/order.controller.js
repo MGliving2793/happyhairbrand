@@ -266,7 +266,8 @@ const renderPaymentSelectionPage = async (req, res) => {
         <div class="header-title">Select Payment Method *</div>
         
         <div class="payment-options">
-          <div class="radio-card active" id="card-prepaid" onclick="selectPayment('PREPAID')">
+          <label class="radio-card active" id="card-prepaid">
+            <input type="radio" name="payMethod" value="PREPAID" checked style="display: none;">
             <div class="radio-header">
               <div class="custom-radio"></div>
               <span class="icon">💳</span>
@@ -274,9 +275,10 @@ const renderPaymentSelectionPage = async (req, res) => {
             </div>
             <div class="desc">Pay now via UPI, Cards, Net Banking</div>
             <div class="badge badge-green">✓ Instant Confirmation</div>
-          </div>
+          </label>
           
-          <div class="radio-card" id="card-cod" onclick="selectPayment('COD')">
+          <label class="radio-card" id="card-cod">
+            <input type="radio" name="payMethod" value="COD" style="display: none;">
             <div class="radio-header">
               <div class="custom-radio"></div>
               <span class="icon">📦</span>
@@ -284,7 +286,7 @@ const renderPaymentSelectionPage = async (req, res) => {
             </div>
             <div class="desc">Pay when you receive your order</div>
             <div class="badge badge-orange">+₹25 COD Charges</div>
-          </div>
+          </label>
         </div>
         
         <div id="error-msg" class="error"></div>
@@ -296,25 +298,32 @@ const renderPaymentSelectionPage = async (req, res) => {
         const CF_ENV = '${CF_ENV}';
         const sessionId = '${paymentSessionId}';
         const orderId = '${order.id}';
-        const baseTotal = ${order.total};
-        let selectedMethod = 'PREPAID';
+        const baseTotal = parseInt('${order.total}', 10) || 0;
         
-        function selectPayment(method) {
-          selectedMethod = method;
-          document.getElementById('card-prepaid').classList.remove('active');
-          document.getElementById('card-cod').classList.remove('active');
-          
-          if (method === 'PREPAID') {
-            document.getElementById('card-prepaid').classList.add('active');
-            document.getElementById('display-total').innerText = baseTotal;
-          } else {
-            document.getElementById('card-cod').classList.add('active');
-            document.getElementById('display-total').innerText = baseTotal + 25;
-          }
-        }
+        const radios = document.querySelectorAll('input[name="payMethod"]');
+        const cardPrepaid = document.getElementById('card-prepaid');
+        const cardCod = document.getElementById('card-cod');
+        const displayTotal = document.getElementById('display-total');
+        
+        radios.forEach(radio => {
+          radio.addEventListener('change', (e) => {
+            const method = e.target.value;
+            cardPrepaid.classList.remove('active');
+            cardCod.classList.remove('active');
+            
+            if (method === 'PREPAID') {
+              cardPrepaid.classList.add('active');
+              displayTotal.innerText = baseTotal;
+            } else {
+              cardCod.classList.add('active');
+              displayTotal.innerText = baseTotal + 25;
+            }
+          });
+        });
 
         document.getElementById('continue-btn').addEventListener('click', async () => {
           const btn = document.getElementById('continue-btn');
+          const selectedMethod = document.querySelector('input[name="payMethod"]:checked').value;
           
           if (selectedMethod === 'PREPAID') {
             if (!sessionId) {

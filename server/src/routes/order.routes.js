@@ -6,6 +6,8 @@ const { validate, schemas } = require('../middlewares/validate.middleware');
 
 router.get('/', authMiddleware, orderController.getAllOrders);
 router.post('/create', validate(schemas.createOrder), orderController.createOrder);
+router.get('/pay/:id', orderController.renderPaymentSelectionPage);
+router.post('/:id/pay-cod', orderController.processCodPayment);
 router.post('/approve', authMiddleware, orderController.approveOrder);
 router.post('/track', orderController.trackOrder);
 router.get('/status/:orderId', orderController.renderTrackingPage);

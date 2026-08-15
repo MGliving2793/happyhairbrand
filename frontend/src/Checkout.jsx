@@ -44,8 +44,17 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
   const [formData, setFormData] = useState(() => {
     try {
       const saved = localStorage.getItem('checkoutForm');
-      return saved ? JSON.parse(saved) : { name: '', email: '', phone: '', address: '', state: '', city: '', pincode: '', paymode: 'PREPAID' };
-    } catch (e) { return { name: '', email: '', phone: '', address: '', state: '', city: '', pincode: '', paymode: 'PREPAID' }; }
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      pincode: ''
+    };
   });
   
   const [loading, setLoading] = useState(false);
@@ -54,11 +63,8 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
   const [errors, setErrors] = useState({});
 
   // Derived state
-  const isCOD = formData.paymode === 'COD';
   const price = initialProduct?.price || 699;
-  const discount = 0; // No prepaid discount in simplified UPI/COD flow
-  const delivery = isCOD ? 20 : 0; // 20 rs extra for COD
-  const total = price + delivery - discount;
+  const total = price;
   
   const citiesList = indianLocations[formData.state] || [];
 
@@ -144,7 +150,7 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
       city: formData.city,
       pincode: formData.pincode,
       state: formData.state,
-      pay_mode: formData.paymode,
+      pay_mode: 'PENDING',
       coupon_code: null,
       cart: [{
         product_id: initialProduct?.id || 1,
@@ -163,38 +169,10 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
       });
       const data = await res.json();
       
-      if (res.ok) {
-        // NATIVE CASHFREE INTEGRATION: Immediately open the payment gateway without redirecting
-        if (data.paymentSessionId && window.Cashfree) {
-          try {
-            const mode = data.cfEnv || 'sandbox';
-            const cf = window.Cashfree({ mode });
-            cf.checkout({
-                paymentSessionId: data.paymentSessionId,
-                redirectTarget: "_self"
-            });
-            return;
-          } catch (e) {
-            console.warn('Cashfree SDK inline initialization failed:', e);
-          }
-        }
-        
-        // Fallback: If Cashfree SDK is blocked or missing, use the safe server-rendered redirect
-        if (data.checkout_url) {
-          window.location.href = data.checkout_url.startsWith('/') ? (window.location.origin + data.checkout_url) : data.checkout_url;
-          return;
-        }
-
-        // COD Success Redirect
-        if (data.shipCorrectOrderNo || data.order_id) {
-          window.location.href = `/api/orders/status/${data.order_id || data.shipCorrectOrderNo}`;
-        } else {
-          alert('Order placed successfully!');
-          localStorage.removeItem('checkoutForm');
-          window.location.reload();
-        }
+      if (res.ok && data.order_id) {
+        window.location.href = `/api/orders/pay/${data.order_id}`;
       } else {
-        setErrors({ form: data.error || 'Failed to place order' });
+        setErrors({ form: data.error || 'Failed to initialize order' });
       }
     } catch (err) {
       console.error(err);
@@ -295,45 +273,6 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
                 </div>
               </div>
 
-              <div className="z-section z-mobile-payment">
-                <h3 className="z-section-title">3. Payment Method</h3>
-                <div className="z-payment-options">
-                  <label className={`z-payment-card ${formData.paymode === 'PREPAID' ? 'active' : ''}`}>
-                    <input 
-                      type="radio" 
-                      name="paymode" 
-                      value="PREPAID" 
-                      checked={formData.paymode === 'PREPAID'} 
-                      onChange={handleInputChange} 
-                    />
-                    <div className="z-payment-content">
-                      <div className="z-payment-header">
-                        <span className="z-payment-name">💳 Pay Now (UPI / QR / Apps)</span>
-                        <span className="z-payment-badge">Cashfree</span>
-                      </div>
-                      <div className="z-payment-desc">Open your UPI app or scan QR to securely complete payment.</div>
-                    </div>
-                  </label>
-
-                  <label className={`z-payment-card ${formData.paymode === 'COD' ? 'active' : ''}`}>
-                    <input 
-                      type="radio" 
-                      name="paymode" 
-                      value="COD" 
-                      checked={formData.paymode === 'COD'} 
-                      onChange={handleInputChange} 
-                    />
-                    <div className="z-payment-content">
-                      <div className="z-payment-header">
-                        <span className="z-payment-name">📦 Cash on Delivery</span>
-                        <span className="z-payment-fee">+₹20</span>
-                      </div>
-                      <div className="z-payment-desc">Pay when the jar arrives.</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
             </form>
           </div>
 
@@ -352,30 +291,13 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
               
               <div className="z-divider"></div>
               
-              <div className="z-price-row">
-                <span>Item Total</span>
-                <span>₹{price}</span>
-              </div>
-
-              <div className="z-price-row z-discount" style={{ display: discount > 0 ? 'flex' : 'none' }}>
-                <span>Prepaid Discount</span>
-                <span>-₹{discount}</span>
-              </div>
-              
-              <div className="z-price-row z-shipping">
-                <span>Delivery Fee</span>
-                <span>{isCOD ? `₹${delivery}` : 'FREE'}</span>
-              </div>
-              
-              <div className="z-divider"></div>
-              
               <div className="z-price-row z-total">
-                <span>To Pay</span>
+                <span>Total</span>
                 <span>₹{total}</span>
               </div>
 
               <button type="button" onClick={submitOrder} className="z-submit-btn" disabled={loading}>
-                {loading ? 'Processing Securely...' : (isCOD ? `Place Order (COD ₹${total})` : `Pay ₹${total}`)}
+                {loading ? 'Processing...' : `Proceed to Payment (₹${total})`}
               </button>
               {errors.form && <div className="z-form-error">{errors.form}</div>}
               <div className="z-trust-footer" style={{ textAlign: 'center', marginTop: '20px', color: '#888', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>

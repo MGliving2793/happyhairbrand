@@ -161,61 +161,178 @@ const createOrder = async (req, res) => {
       }
     });
 
-    if (mode.toUpperCase() === 'COD') {
-      // Async dispatch to ShipCorrect so the customer doesn't wait
-      (async () => {
-        try {
-          const shipCorrectOrderNo = await dispatchToShipCorrect(newOrder, finalCart);
-          if (shipCorrectOrderNo) {
-            await prisma.order.update({
-              where: { id: newOrder.id },
-              data: { order_no: shipCorrectOrderNo.toString() }
-            });
-          }
-          sendOrderConfirmationEmail(newOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
-        } catch (err) {
-          console.error('[BACKGROUND SC]', err);
-          sendOrderConfirmationEmail(newOrder, null).catch(e => console.warn('[MAILER]', e.message));
-        }
-      })();
-
-      // Instantly return success to the user (< 1 second)
-      return res.status(201).json({ 
-        message: 'Order created successfully', 
-        order_id: newOrder.id.toString() 
-      });
-    } else {
-      // PREPAID - initialize Cashfree payment session and return session id to frontend
-      const reqHost = `${req.protocol}://${req.get('host')}`;
-      try {
-        const { cfOrderId, paymentSessionId } = await cashfreeIntegration.createOrder(newOrder, reqHost);
-        // Persist the cfOrderId into utr field for later webhook correlation
-        try {
-          await prisma.order.update({ where: { id: newOrder.id }, data: { utr: cfOrderId } });
-        } catch (e) {
-          console.warn('[ORDER] Failed to save cfOrderId to order:', e.message);
-        }
-
-        return res.status(201).json({ 
-          message: 'Order created successfully. Proceed to payment.', 
-          order_id: newOrder.id.toString(),
-          cfOrderId,
-          paymentSessionId,
-          cfEnv: CF_ENV,
-          checkout_url: `${(process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '')}/api/payment/checkout/${newOrder.id}`
-        });
-      } catch (err) {
-        console.error('[CASHFREE] Failed to create payment session:', err.response?.data || err.message);
-        // Fallback to returning the checkout_url which will create a session server-side when visited
-        return res.status(201).json({ 
-          message: 'Order created but failed to initialize payment session. Use checkout URL to proceed.', 
-          order_id: newOrder.id.toString(),
-          checkout_url: `${(process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '')}/api/payment/checkout/${newOrder.id}`
-        });
-      }
-    }
+    // Return order_id directly, deferring payment gateway and shipcorrect logic to the payment portal
+    return res.status(201).json({ 
+      message: 'Order created successfully. Proceed to payment.', 
+      order_id: newOrder.id.toString() 
+    });
   } catch (error) {
     console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+const renderPaymentSelectionPage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
+    if (!order) return res.status(404).send('Order not found');
+
+    if (order.status !== 'Pending' && order.status !== 'Payment_Failed') {
+      return res.redirect(`/api/orders/status/${order.id}`);
+    }
+
+    // Generate Cashfree Session
+    const reqHost = `${req.protocol}://${req.get('host')}`;
+    let paymentSessionId = '';
+    try {
+      const cfRes = await cashfreeIntegration.createOrder(order, reqHost);
+      paymentSessionId = cfRes.paymentSessionId;
+      await prisma.order.update({ where: { id: order.id }, data: { utr: cfRes.cfOrderId } });
+    } catch (e) {
+      console.error('[CASHFREE] Failed to generate payment session for portal:', e.message);
+    }
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <title>Secure Payment Portal - Happy Hair</title>
+      <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: #f9fafb; color: #111827; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .portal-card { background: #fff; width: 100%; max-width: 420px; border-radius: 24px; padding: 32px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08); text-align: center; }
+        .logo { font-size: 24px; font-weight: 800; color: #111827; margin-bottom: 8px; }
+        .amount { font-size: 42px; font-weight: 800; color: #111827; margin: 24px 0 8px; letter-spacing: -1px; }
+        .amount-label { color: #6b7280; font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+        .divider { height: 1px; background: #e5e7eb; margin: 32px 0; }
+        .btn { width: 100%; padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+        .btn-prepaid { background: #111827; color: #fff; box-shadow: 0 4px 12px rgba(17,24,39,0.2); }
+        .btn-prepaid:hover { background: #000; transform: translateY(-2px); }
+        .btn-cod { background: #f3f4f6; color: #374151; }
+        .btn-cod:hover { background: #e5e7eb; }
+        .secure-badge { margin-top: 24px; color: #9ca3af; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .cod-fee { font-size: 13px; color: #6b7280; font-weight: 500; margin-top: -8px; margin-bottom: 24px; display: block; }
+        .error { color: #dc2626; font-size: 14px; margin-top: 16px; display: none; background: #fef2f2; padding: 12px; border-radius: 8px; }
+      </style>
+    </head>
+    <body>
+      <div class="portal-card">
+        <div class="logo">Happy Hair</div>
+        <div class="amount-label">Amount to Pay</div>
+        <div class="amount">₹${order.total}</div>
+        
+        <div class="divider"></div>
+
+        <button id="prepaid-btn" class="btn btn-prepaid">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+          Pay Now (UPI, Cards)
+        </button>
+        
+        <button id="cod-btn" class="btn btn-cod">
+          📦 Cash on Delivery
+        </button>
+        <span class="cod-fee">Additional ₹20 fee applies</span>
+        
+        <div id="error-msg" class="error"></div>
+
+        <div class="secure-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          100% Secure Payments
+        </div>
+      </div>
+
+      <script>
+        const CF_ENV = '${CF_ENV}';
+        const sessionId = '${paymentSessionId}';
+        const orderId = '${order.id}';
+        
+        document.getElementById('prepaid-btn').addEventListener('click', () => {
+          if (!sessionId) {
+            document.getElementById('error-msg').innerText = 'Payment session unavailable. Please try COD.';
+            document.getElementById('error-msg').style.display = 'block';
+            return;
+          }
+          const cf = Cashfree({ mode: CF_ENV });
+          cf.checkout({ paymentSessionId: sessionId, redirectTarget: "_self" });
+        });
+
+        document.getElementById('cod-btn').addEventListener('click', async () => {
+          const btn = document.getElementById('cod-btn');
+          btn.innerHTML = '<svg class="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Processing...';
+          btn.disabled = true;
+          document.getElementById('prepaid-btn').disabled = true;
+          
+          try {
+            const res = await fetch('/api/orders/' + orderId + '/pay-cod', { method: 'POST' });
+            if (res.ok) {
+              window.location.href = '/api/orders/status/' + orderId;
+            } else {
+              throw new Error('Failed to process COD');
+            }
+          } catch(e) {
+            document.getElementById('error-msg').innerText = e.message;
+            document.getElementById('error-msg').style.display = 'block';
+            btn.innerHTML = '📦 Cash on Delivery';
+            btn.disabled = false;
+            document.getElementById('prepaid-btn').disabled = false;
+          }
+        });
+      </script>
+    </body>
+    </html>
+    `;
+    res.send(html);
+  } catch (error) {
+    console.error('Error rendering payment page:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+const processCodPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    if (order.status !== 'Pending') {
+      return res.status(400).json({ error: 'Order already processed' });
+    }
+
+    // Add 20rs COD fee
+    const updatedTotal = (order.total || 0) + 20;
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { pay_mode: 'COD', total: updatedTotal }
+    });
+
+    let cart = [];
+    try { cart = JSON.parse(order.cart_details); } catch(e){}
+
+    // Async dispatch to ShipCorrect
+    (async () => {
+      try {
+        const shipCorrectOrderNo = await dispatchToShipCorrect(updatedOrder, cart);
+        if (shipCorrectOrderNo) {
+          await prisma.order.update({
+            where: { id: updatedOrder.id },
+            data: { order_no: shipCorrectOrderNo.toString() }
+          });
+        }
+        sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
+      } catch (err) {
+        console.error('[BACKGROUND SC]', err);
+      }
+    })();
+
+    res.json({ message: 'COD Order Confirmed' });
+  } catch (error) {
+    console.error('Error processing COD:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -478,6 +595,8 @@ module.exports = {
   claimUpi,
   dispatchToShipCorrect,
   renderTrackingPage,
+  renderPaymentSelectionPage,
+  processCodPayment,
   getAllOrders,
   deleteOrder,
   updateOrderStatus

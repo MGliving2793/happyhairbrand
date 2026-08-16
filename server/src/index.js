@@ -166,7 +166,10 @@ app.use(xssClean);
 // Serve static files for Website and Dashboard
 app.use(express.static(path.join(__dirname, '../../public')));
 app.use('/website', express.static(path.join(__dirname, '../../public')));
-app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard')));
+app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard/dist')));
+app.get('/dashboard/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../dashboard/dist/index.html'));
+});
 
 // Legacy frontend bundle requests a video asset under the API static directory.
 // The repo ships the relevant MP4 under the image directory, so expose it through a compatibility alias.

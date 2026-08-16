@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-royal-dark: #1A361D;
+  --color-royal-light: #2A4A2D;
+  --color-royal-accent: #d4af37;
+  --color-royal-bg: #fdfbf7;
+  --color-royal-surface: #ffffff;
+  --color-royal-text: #2d3748;
+}
+
+body {
+  background-color: var(--color-royal-bg);
+  color: var(--color-royal-text);
+}

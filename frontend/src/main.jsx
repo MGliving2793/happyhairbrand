@@ -36,8 +36,8 @@ window.openProductCheckout = (id, title, price, image) => {
 document.addEventListener('click', function(e) {
   const btn = e.target.closest('button, a, [role="button"]');
   if (btn) {
-    // Don't intercept buttons inside our own modal
-    if (btn.closest('.dyn-checkout-modal')) return;
+    // Don't intercept buttons inside our own injected react root (modal, widgets, banners)
+    if (btn.closest('#advanced-checkout-root')) return;
     
     const text = btn.textContent.trim().toLowerCase();
     const testId = btn.getAttribute('data-testid') || '';

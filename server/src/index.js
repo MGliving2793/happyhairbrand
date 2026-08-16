@@ -114,7 +114,7 @@ app.use(cors({
       return callback(null, true);
     }
 
-    if (host.endsWith('.vercel.app') || host.endsWith('vercel.app') || host.includes('happy-hair-nutrition')) {
+    if (host === 'happyhairbrand.vercel.app' || host === 'www.happyhairbrand.vercel.app' || host === 'happy-hair-nutrition.vercel.app') {
       return callback(null, true);
     }
 
@@ -225,7 +225,13 @@ async function initDbSeed() {
     const adminCount = await prisma.admin.count();
     if (adminCount === 0) {
       const defaultEmail = process.env.ADMIN_EMAIL || 'mgliving2793@gmail.com';
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'mgliving2793';
+      let defaultPassword = process.env.ADMIN_PASSWORD;
+      if (!defaultPassword) {
+        const crypto = require('crypto');
+        defaultPassword = crypto.randomBytes(8).toString('hex');
+        console.warn(`\n[SECURITY WARNING] ADMIN_PASSWORD environment variable is NOT SET.`);
+        console.warn(`[SECURITY WARNING] Generated a secure temporary password for admin (${defaultEmail}): ${defaultPassword}\n`);
+      }
       const hashedPassword = await bcrypt.hash(defaultPassword, 12);
       await prisma.admin.create({
         data: {

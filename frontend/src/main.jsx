@@ -49,6 +49,9 @@ document.addEventListener('click', function(e) {
     // Don't intercept buttons inside our own injected react root (modal, widgets, banners)
     if (btn.closest('#advanced-checkout-root')) return;
     
+    // Don't intercept social media links even if they have an SVG
+    if (btn.href && (btn.href.includes('instagram.com') || btn.href.includes('facebook.com') || btn.href.includes('twitter.com') || btn.href.includes('x.com'))) return;
+    
     const text = btn.textContent.trim().toLowerCase();
     const testId = btn.getAttribute('data-testid') || '';
     const hasCartIcon = btn.classList.contains('cart-icon') || btn.querySelector('svg') !== null;

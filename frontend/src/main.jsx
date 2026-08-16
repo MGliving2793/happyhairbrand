@@ -1,6 +1,8 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import Checkout from './Checkout.jsx'
+import TrackingBanner from './TrackingBanner.jsx'
+import InstagramWidget from './InstagramWidget.jsx'
 
 // Create a mount point if it doesn't exist
 let mountNode = document.getElementById('advanced-checkout-root');
@@ -15,6 +17,8 @@ const root = createRoot(mountNode);
 let renderCheckout = (isOpen, initialProduct) => {
   root.render(
     <React.StrictMode>
+      <TrackingBanner />
+      <InstagramWidget />
       <Checkout isOpen={isOpen} initialProduct={initialProduct} onClose={() => renderCheckout(false, null)} />
     </React.StrictMode>
   );

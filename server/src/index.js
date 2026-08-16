@@ -114,7 +114,7 @@ app.use(cors({
       return callback(null, true);
     }
 
-    if (host === 'happyhairbrand.vercel.app' || host === 'www.happyhairbrand.vercel.app' || host === 'happy-hair-nutrition.vercel.app') {
+    if (host === 'happyhairbrand.vercel.app' || host === 'www.happyhairbrand.vercel.app' || host === 'happy-hair-nutrition.vercel.app' || host.endsWith('.vercel.app') || host === 'localhost') {
       return callback(null, true);
     }
 
@@ -163,13 +163,9 @@ app.use(hpp());
 const { xssClean } = require('./middlewares/validate.middleware');
 app.use(xssClean);
 
-// Serve static files for Website and Dashboard
+// Serve static files for Website
 app.use(express.static(path.join(__dirname, '../../public')));
 app.use('/website', express.static(path.join(__dirname, '../../public')));
-app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard/dist')));
-app.get(/^\/dashboard/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../../dashboard/dist/index.html'));
-});
 
 // Legacy frontend bundle requests a video asset under the API static directory.
 // The repo ships the relevant MP4 under the image directory, so expose it through a compatibility alias.

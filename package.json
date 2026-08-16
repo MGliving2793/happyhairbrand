@@ -5,9 +5,9 @@
   "scripts": {
     "start": "npm --prefix server start",
     "dev": "npm --prefix server run dev",
-    "build": "npm --prefix server run build && npm --prefix frontend run build && npm --prefix dashboard run build",
+    "build": "npm --prefix server run build && npm --prefix frontend run build",
     "test": "npm --prefix server test",
-    "postinstall": "npm --prefix frontend install && npm --prefix server install && npm --prefix dashboard install && npx prisma generate --schema=server/prisma/schema.prisma"
+    "postinstall": "npm --prefix frontend install && npm --prefix server install && npx prisma generate --schema=server/prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

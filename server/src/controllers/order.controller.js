@@ -241,38 +241,55 @@ const renderPaymentSelectionPage = async (req, res) => {
         
         <a href="${upiLink}" class="deep-link-btn" onclick="startVerification()">⚡ Pay via UPI App</a>
         
-        <div class="divider">OR AFTER YOU PAY</div>
+        <div class="divider">AUTO VERIFICATION</div>
         
-        <button id="confirm-btn" class="confirm-btn" onclick="confirmPayment()">I have completed the payment</button>
+        <div id="status-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px;">
+          <div class="loader" id="loader" style="display:inline-block; border-color:#d4af37; border-bottom-color:transparent; margin-bottom: 8px;"></div>
+          <div id="status-text" style="color: #64748b; font-weight: 600; font-size: 14px;">Awaiting payment completion...</div>
+          <div id="timer-text" style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Please wait, do not close this window (<span id="countdown">15</span>s)</div>
+        </div>
       </div>
 
       <script>
         const orderId = '${order.id}';
+        let timeLeft = 15;
+        let verified = false;
         
         function startVerification() {
-          setTimeout(() => {
-            const btn = document.getElementById('confirm-btn');
-            btn.innerText = "Verifying Payment...";
-            btn.style.background = "#d4af37";
-            btn.style.color = "#fff";
-            btn.style.borderColor = "#d4af37";
-            confirmPayment();
-          }, 10000); // Auto confirm logic after 10s if they opened the app
+          if (verified) return;
+          verified = true;
+          document.getElementById('status-text').innerText = "Verifying Payment...";
+          document.getElementById('status-text').style.color = "#d4af37";
+          document.getElementById('timer-text').style.display = "none";
+          confirmPayment();
         }
 
+        const timer = setInterval(() => {
+          if (verified) { clearInterval(timer); return; }
+          timeLeft--;
+          const cd = document.getElementById('countdown');
+          if (cd) cd.innerText = timeLeft;
+          if (timeLeft <= 0) {
+            clearInterval(timer);
+            startVerification();
+          }
+        }, 1000);
+
         async function confirmPayment() {
-          const btn = document.getElementById('confirm-btn');
-          btn.innerHTML = '<div class="loader" style="display:block; border-color:#666; border-bottom-color:transparent;"></div>';
-          btn.disabled = true;
-          
           try {
             const res = await fetch('/api/orders/' + orderId + '/confirm-upi-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' }
             });
             
-            // Always redirect to tracking page after user clicks confirm
-            window.location.href = '/api/orders/status/' + orderId;
+            document.getElementById('status-text').innerText = "Payment Confirmed! Redirecting...";
+            document.getElementById('status-text').style.color = "#10b981";
+            document.getElementById('loader').style.borderColor = "#10b981";
+            document.getElementById('loader').style.borderBottomColor = "transparent";
+            
+            setTimeout(() => {
+              window.location.href = '/api/orders/status/' + orderId;
+            }, 1000);
           } catch (e) {
             window.location.href = '/api/orders/status/' + orderId;
           }

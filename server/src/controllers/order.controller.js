@@ -491,7 +491,7 @@ const processCodPayment = async (req, res) => {
 
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
-      data: { pay_mode: 'COD', total: updatedTotal }
+      data: { pay_mode: 'COD', total: updatedTotal, status: 'Processing' }
     });
 
     let cart = [];

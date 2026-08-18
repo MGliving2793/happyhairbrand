@@ -182,8 +182,6 @@ const renderPaymentSelectionPage = async (req, res) => {
       return res.redirect(`/api/orders/status/${order.id}`);
     }
 
-    // IMPORTANT: Make sure this image is present in public/images/scanner.png
-    // The Deep Link uses a placeholder if we don't have the explicit UPI ID string
     const upiId = "murthyjio71@ybl"; 
     const merchantName = "Happy Hair";
     const amount = order.total;
@@ -195,103 +193,206 @@ const renderPaymentSelectionPage = async (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <title>Secure Checkout - Happy Hair</title>
+      <title>Payment - Happy Hair</title>
       <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: #fbf9f6; color: #3d2f25; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-        .portal-card { background: #fff; width: 100%; max-width: 500px; border-radius: 16px; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); border: 1px solid #f0ebe1; text-align: center; }
+        body { background: #fbf9f6; color: #3d2f25; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+        .portal-card { background: #fff; width: 100%; max-width: 480px; border-radius: 24px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); border: 1px solid #f0ebe1; }
         
-        .header-title { font-size: 22px; font-weight: 700; color: #1a361d; margin-bottom: 8px; }
-        .sub-title { font-size: 14px; color: #6b7280; margin-bottom: 30px; }
+        .header-title { font-size: 24px; font-weight: 700; color: #4a3b32; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .header-title svg { color: #d4af37; }
         
-        .amount-display { font-size: 36px; font-weight: 800; color: #d4af37; margin-bottom: 20px; }
+        .section-title { font-size: 16px; font-weight: 700; color: #4a3b32; margin-bottom: 16px; margin-top: 24px; }
         
-        .qr-container { margin: 0 auto 20px; padding: 16px; background: #fff; border-radius: 16px; border: 2px dashed #e5e7eb; display: inline-block; }
-        .qr-container img { max-width: 250px; height: auto; border-radius: 8px; display: block; }
+        .upi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .upi-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; text-decoration: none; color: #4b5563; font-size: 13px; font-weight: 600; transition: all 0.2s; background: #fff; }
+        .upi-btn:hover { border-color: #d4af37; background: #fffdf7; }
+        .upi-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold; margin-bottom: 8px; }
         
-        .deep-link-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 18px; border-radius: 12px; background: linear-gradient(135deg, #1a361d 0%, #2a562d 100%); color: #fff; font-size: 16px; font-weight: 700; text-decoration: none; margin-bottom: 16px; transition: transform 0.2s, box-shadow 0.2s; }
-        .deep-link-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(26, 54, 29, 0.3); }
+        .qr-section { background: #fdfbf7; border: 1px solid #f0ebe1; border-radius: 16px; padding: 24px 16px; text-align: center; margin-bottom: 24px; }
+        .qr-section img { max-width: 200px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .qr-hint { font-size: 14px; color: #6b7280; margin-top: 16px; font-weight: 500; }
         
-        .confirm-btn { width: 100%; padding: 18px; border-radius: 12px; background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .confirm-btn:hover { background: #e5e7eb; color: #1f2937; }
-        .confirm-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .upi-id-box { display: flex; align-items: center; gap: 8px; margin-bottom: 32px; }
+        .upi-input { flex: 1; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 14px; font-weight: 600; color: #374151; background: #fafaf9; outline: none; }
+        .copy-btn { padding: 16px; background: #4a3b32; color: white; border: none; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .copy-btn:hover { background: #322822; }
         
-        .divider { display: flex; align-items: center; text-align: center; margin: 24px 0; color: #9ca3af; font-size: 14px; }
-        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e5e7eb; }
-        .divider::not(:empty)::before { margin-right: .25em; }
-        .divider::not(:empty)::after { margin-left: .25em; }
+        .upload-box { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px 16px; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 24px; background: #f8fafc; position: relative; }
+        .upload-box:hover { border-color: #d4af37; background: #fffdf7; }
+        .upload-box.has-file { border-style: solid; border-color: #10b981; background: #ecfdf5; }
+        .upload-icon { font-size: 24px; color: #d4af37; margin-bottom: 8px; }
+        .upload-text { font-size: 14px; font-weight: 600; color: #475569; }
+        .file-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        
+        .submit-btn { width: 100%; padding: 18px; border-radius: 12px; background: #10b981; color: #fff; font-size: 16px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(16,185,129,0.3); }
+        .submit-btn:hover { background: #059669; box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
+        .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
 
-        .loader { display: none; width: 20px; height: 20px; border: 3px solid #ffffff; border-bottom-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .error-msg { color: #ef4444; font-size: 13px; font-weight: 600; margin-bottom: 16px; text-align: center; display: none; }
       </style>
     </head>
     <body>
       <div class="portal-card">
-        <h1 class="header-title">Complete Your Payment</h1>
-        <p class="sub-title">Scan the QR code or click the button below to pay securely</p>
+        <h1 class="header-title">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+          Payment
+        </h1>
         
-        <div class="amount-display">₹${amount}</div>
-        
-        <div class="qr-container">
-          <!-- Uses your uploaded PhonePe scanner image, falls back to dynamic QR if missing -->
-          <img src="/images/scanner.png" alt="Scan to Pay" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent('${upiLink}')">
-          <p style="font-size: 12px; color: #6b7280; margin-top: 12px; font-weight: 600;">Accepts GPay, PhonePe, Paytm & More</p>
+        <div class="section-title">Pay via UPI</div>
+        <div class="upi-grid">
+          <a href="${upiLink}" class="upi-btn" onclick="openApp()">
+            <div class="upi-icon" style="background: linear-gradient(135deg, #10b981, #059669);">G</div>
+            Google Pay
+          </a>
+          <a href="${upiLink}" class="upi-btn" onclick="openApp()">
+            <div class="upi-icon" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">P</div>
+            PhonePe
+          </a>
+          <a href="${upiLink}" class="upi-btn" onclick="openApp()">
+            <div class="upi-icon" style="background: linear-gradient(135deg, #0ea5e9, #0284c7);">P</div>
+            Paytm
+          </a>
+          <a href="${upiLink}" class="upi-btn" onclick="openApp()">
+            <div class="upi-icon" style="background: linear-gradient(135deg, #f97316, #ea580c);">B</div>
+            BHIM UPI
+          </a>
         </div>
         
-        <a href="${upiLink}" class="deep-link-btn" onclick="startVerification()">⚡ Pay via UPI App</a>
-        
-        <div class="divider">AUTO VERIFICATION</div>
-        
-        <div id="status-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px;">
-          <div class="loader" id="loader" style="display:inline-block; border-color:#d4af37; border-bottom-color:transparent; margin-bottom: 8px;"></div>
-          <div id="status-text" style="color: #64748b; font-weight: 600; font-size: 14px;">Awaiting payment completion...</div>
-          <div id="timer-text" style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Please wait, do not close this window (<span id="countdown">15</span>s)</div>
+        <div class="qr-section">
+          <div class="section-title" style="margin-top: 0;">Scan QR Code</div>
+          <img src="/images/scanner.png" alt="QR Code" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent('${upiLink}')">
+          <div class="qr-hint">Scan with any UPI app to pay ₹${amount}</div>
         </div>
+        
+        <div class="section-title">UPI ID</div>
+        <div class="upi-id-box">
+          <input type="text" class="upi-input" id="upi-val" value="${upiId}" readonly>
+          <button class="copy-btn" onclick="copyUpi()" title="Copy">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin-bottom: 24px;">
+        
+        <div class="section-title">Confirm Payment</div>
+        
+        <div class="upload-box" id="upload-box">
+          <input type="file" class="file-input" id="screenshot-input" accept="image/*" onchange="handleFile(this)">
+          <div class="upload-icon">↑</div>
+          <div class="upload-text" id="upload-text">Payment Screenshot *<br><span style="font-size:12px; font-weight:400; color:#94a3b8; margin-top:4px; display:block;">Click to upload successfully paid receipt</span></div>
+        </div>
+        
+        <div id="error-msg" class="error-msg"></div>
+        
+        <button id="submit-btn" class="submit-btn" onclick="submitReceipt()">Confirm Payment</button>
       </div>
 
       <script>
         const orderId = '${order.id}';
-        let timeLeft = 15;
-        let verified = false;
-        
-        function startVerification() {
-          if (verified) return;
-          verified = true;
-          document.getElementById('status-text').innerText = "Verifying Payment...";
-          document.getElementById('status-text').style.color = "#d4af37";
-          document.getElementById('timer-text').style.display = "none";
-          confirmPayment();
+        let compressedBase64 = null;
+
+        function copyUpi() {
+          const input = document.getElementById('upi-val');
+          input.select();
+          input.setSelectionRange(0, 99999);
+          navigator.clipboard.writeText(input.value);
+          const btn = document.querySelector('.copy-btn');
+          const originalHtml = btn.innerHTML;
+          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+          setTimeout(() => btn.innerHTML = originalHtml, 2000);
         }
 
-        const timer = setInterval(() => {
-          if (verified) { clearInterval(timer); return; }
-          timeLeft--;
-          const cd = document.getElementById('countdown');
-          if (cd) cd.innerText = timeLeft;
-          if (timeLeft <= 0) {
-            clearInterval(timer);
-            startVerification();
-          }
-        }, 1000);
+        function openApp() {
+          // Do nothing, just let the intent fire
+        }
 
-        async function confirmPayment() {
+        function handleFile(input) {
+          const file = input.files[0];
+          if (!file) return;
+          
+          const box = document.getElementById('upload-box');
+          const txt = document.getElementById('upload-text');
+          txt.innerHTML = "Processing image...";
+          
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = function(event) {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = function() {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 800;
+              const MAX_HEIGHT = 800;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width *= MAX_HEIGHT / height;
+                  height = MAX_HEIGHT;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              // Compress to JPEG 70% quality to keep size tiny (<100kb)
+              compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+              
+              box.classList.add('has-file');
+              txt.innerHTML = "Screenshot Uploaded ✓<br><span style='font-size:12px; font-weight:400;'>Click to change</span>";
+            }
+          };
+        }
+
+        async function submitReceipt() {
+          const err = document.getElementById('error-msg');
+          const btn = document.getElementById('submit-btn');
+          
+          if (!compressedBase64) {
+            err.innerText = "Please upload a payment screenshot.";
+            err.style.display = "block";
+            return;
+          }
+          
+          err.style.display = "none";
+          btn.disabled = true;
+          btn.innerText = "Verifying & Processing...";
+          
           try {
             const res = await fetch('/api/orders/' + orderId + '/confirm-upi-payment', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ receiptBase64: compressedBase64 })
             });
             
-            document.getElementById('status-text').innerText = "Payment Confirmed! Redirecting...";
-            document.getElementById('status-text').style.color = "#10b981";
-            document.getElementById('loader').style.borderColor = "#10b981";
-            document.getElementById('loader').style.borderBottomColor = "transparent";
+            const data = await res.json();
             
-            setTimeout(() => {
-              window.location.href = '/api/orders/status/' + orderId;
-            }, 1000);
+            if (res.ok) {
+              btn.innerText = "Success! Redirecting...";
+              btn.style.background = "#d4af37";
+              setTimeout(() => {
+                window.location.href = '/api/orders/status/' + orderId;
+              }, 1000);
+            } else {
+              err.innerText = data.error || "Verification failed.";
+              err.style.display = "block";
+              btn.disabled = false;
+              btn.innerText = "Confirm Payment";
+            }
           } catch (e) {
-            window.location.href = '/api/orders/status/' + orderId;
+            err.innerText = "Network error. Try again.";
+            err.style.display = "block";
+            btn.disabled = false;
+            btn.innerText = "Confirm Payment";
           }
         }
       </script>
@@ -305,14 +406,34 @@ const renderPaymentSelectionPage = async (req, res) => {
   }
 };
 
+const crypto = require('crypto');
+
 const confirmUpiPayment = async (req, res) => {
   try {
     const { id } = req.params;
+    const { receiptBase64 } = req.body;
+    
+    if (!receiptBase64) {
+      return res.status(400).json({ error: 'Payment screenshot is required.' });
+    }
+
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
     if (order.status.toUpperCase() !== 'PENDING' && order.status.toUpperCase() !== 'PENDING VERIFICATION') {
        return res.json({ message: 'Already processed' });
+    }
+    
+    // Hash the Base64 image
+    const imageHash = crypto.createHash('sha256').update(receiptBase64).digest('hex');
+    
+    // Check for Duplicate Hash in DB
+    const existingHash = await prisma.order.findFirst({
+      where: { utr: imageHash }
+    });
+    
+    if (existingHash && existingHash.id !== order.id) {
+      return res.status(400).json({ error: 'Duplicate screenshot detected! This receipt has already been used.' });
     }
 
     let cart = [];
@@ -322,7 +443,12 @@ const confirmUpiPayment = async (req, res) => {
 
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
-      data: { status: 'Processing', order_no: shipCorrectOrderNo ? shipCorrectOrderNo.toString() : order.order_no }
+      data: { 
+        status: 'Processing', 
+        order_no: shipCorrectOrderNo ? shipCorrectOrderNo.toString() : order.order_no,
+        utr: imageHash,               // We store the cryptographic hash of the screenshot in the UTR column
+        payment_receipt: receiptBase64 // Storing the actual tiny compressed base64 image
+      }
     });
 
     sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));

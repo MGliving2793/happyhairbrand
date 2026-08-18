@@ -260,7 +260,7 @@ const renderPaymentSelectionPage = async (req, res) => {
             BHIM UPI
           </a>
           <form id="codForm" action="/api/orders/${order.id}/pay-cod" method="POST" style="display: none;"></form>
-          <a href="javascript:void(0)" class="upi-btn" onclick="if(confirm('Switching to Cash on Delivery will add a ₹20 charge. Proceed?')) document.getElementById('codForm').submit()" style="background: #fffdf7; border-color: #f59e0b;">
+          <a href="javascript:void(0)" class="upi-btn" href="/api/orders/${order.id}/cod-confirm" style="background: #fffdf7; border-color: #f59e0b;">
             <div style="font-size: 24px; margin-bottom: 8px;">💵</div>
             Cash on Delivery
           </a>
@@ -444,19 +444,30 @@ const confirmUpiPayment = async (req, res) => {
     let cart = [];
     try { cart = JSON.parse(order.cart_details); } catch(e){}
 
-    const shipCorrectOrderNo = await dispatchToShipCorrect(order, cart);
-
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: { 
         status: 'Processing', 
-        order_no: shipCorrectOrderNo ? shipCorrectOrderNo.toString() : order.order_no,
         utr: imageHash,               // We store the cryptographic hash of the screenshot in the UTR column
         payment_receipt: receiptBase64 // Storing the actual tiny compressed base64 image
       }
     });
 
-    sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
+    // Async dispatch to ShipCorrect
+    (async () => {
+      try {
+        const shipCorrectOrderNo = await dispatchToShipCorrect(updatedOrder, cart);
+        if (shipCorrectOrderNo) {
+          await prisma.order.update({
+            where: { id: updatedOrder.id },
+            data: { order_no: shipCorrectOrderNo.toString() }
+          });
+        }
+        sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
+      } catch (err) {
+        console.error('[BACKGROUND SC]', err);
+      }
+    })();
 
     res.json({ message: 'Payment Confirmed' });
   } catch (error) {
@@ -761,7 +772,80 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+
+const renderCodConfirmPage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
+    if (!order) return res.status(404).send('Order not found');
+
+    if (order.status.toUpperCase() !== 'PENDING' && order.status.toUpperCase() !== 'PENDING VERIFICATION') {
+      return res.redirect(`/api/orders/status/${order.id}`);
+    }
+
+    const codTotal = (order.total || 0) + 20;
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <title>Confirm COD - Happy Hair</title>
+      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: #fbf9f6; color: #3d2f25; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+        .portal-card { background: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 32px 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); border: 1px solid #f0ebe1; text-align: center; }
+        .icon { font-size: 48px; margin-bottom: 16px; }
+        .title { font-size: 22px; font-weight: 700; color: #4a3b32; margin-bottom: 12px; }
+        .desc { font-size: 15px; color: #6b7280; margin-bottom: 24px; line-height: 1.5; }
+        .bill-box { background: #fafaf9; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 32px; }
+        .bill-row { display: flex; justify-content: space-between; font-size: 14px; color: #4b5563; margin-bottom: 12px; }
+        .bill-row:last-child { margin-bottom: 0; font-weight: 700; font-size: 18px; color: #10b981; border-top: 1px dashed #d1d5db; padding-top: 12px; }
+        .submit-btn { width: 100%; padding: 18px; border-radius: 12px; background: #10b981; color: #fff; font-size: 16px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(16,185,129,0.3); }
+        .submit-btn:hover { background: #059669; box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
+        .back-link { display: inline-block; margin-top: 16px; font-size: 14px; font-weight: 600; color: #9ca3af; text-decoration: none; }
+      </style>
+    </head>
+    <body>
+      <div class="portal-card">
+        <div class="icon">💵</div>
+        <h1 class="title">Cash on Delivery</h1>
+        <p class="desc">Please confirm your final bill to place your order with Cash on Delivery.</p>
+        
+        <div class="bill-box">
+          <div class="bill-row">
+            <span>Subtotal</span>
+            <span>₹${order.total}</span>
+          </div>
+          <div class="bill-row">
+            <span>COD Charge</span>
+            <span>+ ₹20</span>
+          </div>
+          <div class="bill-row">
+            <span>Total to Pay</span>
+            <span>₹${codTotal}</span>
+          </div>
+        </div>
+
+        <form action="/api/orders/${order.id}/pay-cod" method="POST">
+          <button type="submit" class="submit-btn" onclick="this.innerText='Confirming...'; this.style.opacity=0.7;">Confirm COD Order</button>
+        </form>
+        <a href="/api/orders/pay/${order.id}" class="back-link">Back to UPI Payment</a>
+      </div>
+    </body>
+    </html>
+    `;
+    res.send(html);
+  } catch (error) {
+    console.error('Error rendering COD confirm page:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
 module.exports = {
+  renderCodConfirmPage,
   createOrder,
   approveOrder,
   trackOrder,

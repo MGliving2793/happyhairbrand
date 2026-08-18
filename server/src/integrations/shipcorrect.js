@@ -34,7 +34,7 @@ const createOrder = async (order, cart) => {
     length: 10,
     breadth: 10,
     height: 5,
-    pickup_id: "WH-001"
+    pickup_id: process.env.SHIPCORRECT_PICKUP_ID || "WH-001"
   };
 
   try {

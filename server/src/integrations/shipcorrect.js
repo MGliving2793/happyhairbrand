@@ -1,14 +1,8 @@
 const axios = require('axios');
 
 const createOrder = async (order, cart) => {
-  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || '';
-  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://shipcorrect.com/api';
-
-  // If running tests or if API key is not configured, return a safe local reference
-  const useLocalReference = process.env.NODE_ENV === 'test' || !shipcorrectApiKey || shipcorrectApiKey === 'default_shipcorrect_key' || shipcorrectApiKey.toLowerCase().includes('your_');
-  if (useLocalReference) {
-    return `SC-${order.id}-${Math.floor(100000 + Math.random() * 900000)}`;
-  }
+  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || 'dd2b48e36cf8eb837d7b';
+  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://www.shipcorrect.com/api';
 
   const productName = cart && cart.length > 0 ? cart.map(item => item.title).join(', ').substring(0, 50) : 'Happy Hair Product';
   const sku = (cart && cart.length > 0 && cart[0].SKU) ? cart[0].SKU : 'SKU-HAPPY-HAIR';
@@ -60,8 +54,8 @@ const createOrder = async (order, cart) => {
 };
 
 const trackOrder = async (order_no) => {
-  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || '';
-  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://shipcorrect.com/api';
+  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || 'dd2b48e36cf8eb837d7b';
+  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://www.shipcorrect.com/api';
 
   if (!order_no) return { tracking_status: 'Unknown', scan_stages: [] };
 

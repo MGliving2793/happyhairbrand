@@ -763,6 +763,7 @@ module.exports = {
   claimUpi,
   dispatchToShipCorrect,
   renderTrackingPage,
+  renderPaymentSelectionPage,
   confirmUpiPayment,
   processCodPayment,
   getAllOrders,

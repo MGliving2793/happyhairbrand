@@ -44,7 +44,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION] Reason:', reason && reason.message ? reason.message : reason);
 });
 process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT EXCEPTION] Message:', err && err.message ? err.message : err);
+  console.error('[UNCAUGHT EXCEPTION]', err);
   // In production you might want to exit process to allow a supervisor to restart
 });
 

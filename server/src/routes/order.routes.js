@@ -15,4 +15,6 @@ router.post('/:id/claim-upi', orderController.claimUpi);
 router.put('/:id/status', authMiddleware, orderController.updateOrderStatus);
 router.delete('/:id', authMiddleware, orderController.deleteOrder);
 
+router.post('/:id/confirm-upi-payment', orderController.confirmUpiPayment);
+
 module.exports = router;

@@ -182,16 +182,12 @@ const renderPaymentSelectionPage = async (req, res) => {
       return res.redirect(`/api/orders/status/${order.id}`);
     }
 
-    // Generate Cashfree Session
-    const reqHost = `${req.protocol}://${req.get('host')}`;
-    let paymentSessionId = '';
-    try {
-      const cfRes = await cashfreeIntegration.createOrder(order, reqHost);
-      paymentSessionId = cfRes.paymentSessionId;
-      await prisma.order.update({ where: { id: order.id }, data: { utr: cfRes.cfOrderId } });
-    } catch (e) {
-      console.error('[CASHFREE] Failed to generate payment session for portal:', e.message);
-    }
+    // IMPORTANT: Make sure this image is present in public/images/scanner.png
+    // The Deep Link uses a placeholder if we don't have the explicit UPI ID string
+    const upiId = "murthyjio71@ybl"; 
+    const merchantName = "Happy Hair";
+    const amount = order.total;
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
 
     const html = `
     <!DOCTYPE html>
@@ -199,161 +195,88 @@ const renderPaymentSelectionPage = async (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <title>Select Payment Method - Happy Hair</title>
-      <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+      <title>Secure Checkout - Happy Hair</title>
       <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: #fbf9f6; color: #3d2f25; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-        .portal-card { background: #fff; width: 100%; max-width: 600px; border-radius: 12px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); border: 1px solid #f0ebe1; }
+        .portal-card { background: #fff; width: 100%; max-width: 500px; border-radius: 16px; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); border: 1px solid #f0ebe1; text-align: center; }
         
-        .header-title { font-size: 16px; font-weight: 700; color: #4a3b32; margin-bottom: 20px; }
+        .header-title { font-size: 22px; font-weight: 700; color: #1a361d; margin-bottom: 8px; }
+        .sub-title { font-size: 14px; color: #6b7280; margin-bottom: 30px; }
         
-        .payment-options { display: flex; gap: 16px; margin-bottom: 32px; }
-        @media (max-width: 500px) { .payment-options { flex-direction: column; } }
+        .amount-display { font-size: 36px; font-weight: 800; color: #d4af37; margin-bottom: 20px; }
         
-        .radio-card { flex: 1; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; background: #fafaf9; display: flex; flex-direction: column; }
-        .radio-card.active { border-color: #d4af37; background: #fffdf7; }
+        .qr-container { margin: 0 auto 20px; padding: 16px; background: #fff; border-radius: 16px; border: 2px dashed #e5e7eb; display: inline-block; }
+        .qr-container img { max-width: 250px; height: auto; border-radius: 8px; display: block; }
         
-        .radio-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-        .custom-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; }
-        .radio-card.active .custom-radio { border-color: #d4af37; background: #d4af37; }
-        .custom-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #fff; transform: scale(0); transition: transform 0.2s; }
-        .radio-card.active .custom-radio::after { transform: scale(1); }
+        .deep-link-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 18px; border-radius: 12px; background: linear-gradient(135deg, #1a361d 0%, #2a562d 100%); color: #fff; font-size: 16px; font-weight: 700; text-decoration: none; margin-bottom: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+        .deep-link-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(26, 54, 29, 0.3); }
         
-        .icon { font-size: 20px; }
-        .title { font-size: 16px; font-weight: 600; color: #4a3b32; }
+        .confirm-btn { width: 100%; padding: 18px; border-radius: 12px; background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .confirm-btn:hover { background: #e5e7eb; color: #1f2937; }
+        .confirm-btn:disabled { opacity: 0.7; cursor: not-allowed; }
         
-        .desc { font-size: 13px; color: #6b7280; margin-bottom: 12px; line-height: 1.4; }
-        
-        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; width: fit-content; }
-        .badge-green { background: #dcfce7; color: #166534; }
-        .badge-orange { background: #ffedd5; color: #9a3412; }
-        
-        .continue-btn { width: 100%; padding: 18px; border-radius: 12px; background: #523b31; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; border: none; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .continue-btn:hover { background: #3f2d25; }
-        .continue-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-        
-        .error { color: #dc2626; font-size: 14px; margin-top: 16px; display: none; background: #fef2f2; padding: 12px; border-radius: 8px; text-align: center; }
-        
-        /* Order Summary visual */
-        .summary-box { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb; }
-        .summary-title { font-size: 22px; font-weight: 600; color: #4a3b32; margin-bottom: 20px; }
-        .summary-row { display: flex; justify-content: space-between; font-size: 15px; color: #4b5563; margin-bottom: 12px; }
-        .summary-row.total { font-size: 20px; font-weight: 700; color: #4a3b32; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
-        .gold-text { color: #d4af37; font-size: 28px; }
+        .divider { display: flex; align-items: center; text-align: center; margin: 24px 0; color: #9ca3af; font-size: 14px; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e5e7eb; }
+        .divider::not(:empty)::before { margin-right: .25em; }
+        .divider::not(:empty)::after { margin-left: .25em; }
+
+        .loader { display: none; width: 20px; height: 20px; border: 3px solid #ffffff; border-bottom-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
       </style>
     </head>
     <body>
       <div class="portal-card">
+        <h1 class="header-title">Complete Your Payment</h1>
+        <p class="sub-title">Scan the QR code or click the button below to pay securely</p>
         
-        <div class="summary-box">
-          <h2 class="summary-title">Order Summary</h2>
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <span>₹${order.total}</span>
-          </div>
-          <div class="summary-row">
-            <span>Shipping</span>
-            <span>FREE</span>
-          </div>
-          <div class="summary-row total">
-            <span>Total</span>
-            <span class="gold-text">₹<span id="display-total">${order.total}</span></span>
-          </div>
-        </div>
-
-        <div class="header-title">Select Payment Method *</div>
+        <div class="amount-display">₹${amount}</div>
         
-        <div class="payment-options">
-          <label class="radio-card active" id="card-prepaid">
-            <input type="radio" name="payMethod" value="PREPAID" checked style="display: none;">
-            <div class="radio-header">
-              <div class="custom-radio"></div>
-              <span class="icon">💳</span>
-              <span class="title">Online Payment</span>
-            </div>
-            <div class="desc">Pay now via UPI, Cards, Net Banking</div>
-            <div class="badge badge-green">✓ Instant Confirmation</div>
-          </label>
-          
-          <label class="radio-card" id="card-cod">
-            <input type="radio" name="payMethod" value="COD" style="display: none;">
-            <div class="radio-header">
-              <div class="custom-radio"></div>
-              <span class="icon">📦</span>
-              <span class="title">Cash on Delivery</span>
-            </div>
-            <div class="desc">Pay when you receive your order</div>
-            <div class="badge badge-orange">+₹25 COD Charges</div>
-          </label>
+        <div class="qr-container">
+          <!-- Uses your uploaded PhonePe scanner image, falls back to dynamic QR if missing -->
+          <img src="/images/scanner.png" alt="Scan to Pay" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent('${upiLink}')">
+          <p style="font-size: 12px; color: #6b7280; margin-top: 12px; font-weight: 600;">Accepts GPay, PhonePe, Paytm & More</p>
         </div>
         
-        <div id="error-msg" class="error"></div>
+        <a href="${upiLink}" class="deep-link-btn" onclick="startVerification()">⚡ Pay via UPI App</a>
         
-        <button id="continue-btn" class="continue-btn">Continue to Payment</button>
+        <div class="divider">OR AFTER YOU PAY</div>
+        
+        <button id="confirm-btn" class="confirm-btn" onclick="confirmPayment()">I have completed the payment</button>
       </div>
 
       <script>
-        const CF_ENV = '${CF_ENV}';
-        const sessionId = '${paymentSessionId}';
         const orderId = '${order.id}';
-        const baseTotal = parseInt('${order.total}', 10) || 0;
         
-        const radios = document.querySelectorAll('input[name="payMethod"]');
-        const cardPrepaid = document.getElementById('card-prepaid');
-        const cardCod = document.getElementById('card-cod');
-        const displayTotal = document.getElementById('display-total');
-        
-        radios.forEach(radio => {
-          radio.addEventListener('change', (e) => {
-            const method = e.target.value;
-            cardPrepaid.classList.remove('active');
-            cardCod.classList.remove('active');
-            
-            if (method === 'PREPAID') {
-              cardPrepaid.classList.add('active');
-              displayTotal.innerText = baseTotal;
-            } else {
-              cardCod.classList.add('active');
-              displayTotal.innerText = baseTotal + 25;
-            }
-          });
-        });
+        function startVerification() {
+          setTimeout(() => {
+            const btn = document.getElementById('confirm-btn');
+            btn.innerText = "Verifying Payment...";
+            btn.style.background = "#d4af37";
+            btn.style.color = "#fff";
+            btn.style.borderColor = "#d4af37";
+            confirmPayment();
+          }, 10000); // Auto confirm logic after 10s if they opened the app
+        }
 
-        document.getElementById('continue-btn').addEventListener('click', async () => {
-          const btn = document.getElementById('continue-btn');
-          const selectedMethod = document.querySelector('input[name="payMethod"]:checked').value;
+        async function confirmPayment() {
+          const btn = document.getElementById('confirm-btn');
+          btn.innerHTML = '<div class="loader" style="display:block; border-color:#666; border-bottom-color:transparent;"></div>';
+          btn.disabled = true;
           
-          if (selectedMethod === 'PREPAID') {
-            if (!sessionId) {
-              document.getElementById('error-msg').innerText = 'Payment session unavailable. Please try COD.';
-              document.getElementById('error-msg').style.display = 'block';
-              return;
-            }
-            btn.innerHTML = 'Processing...';
-            btn.disabled = true;
-            const cf = Cashfree({ mode: CF_ENV });
-            cf.checkout({ paymentSessionId: sessionId, redirectTarget: "_self" });
-          } else {
-            btn.innerHTML = 'Processing...';
-            btn.disabled = true;
+          try {
+            const res = await fetch('/api/orders/' + orderId + '/confirm-upi-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
             
-            try {
-              const res = await fetch('/api/orders/' + orderId + '/pay-cod', { method: 'POST' });
-              if (res.ok) {
-                window.location.href = '/api/orders/status/' + orderId;
-              } else {
-                throw new Error('Failed to process COD');
-              }
-            } catch(e) {
-              document.getElementById('error-msg').innerText = e.message;
-              document.getElementById('error-msg').style.display = 'block';
-              btn.innerHTML = 'Continue to Payment';
-              btn.disabled = false;
-            }
+            // Always redirect to tracking page after user clicks confirm
+            window.location.href = '/api/orders/status/' + orderId;
+          } catch (e) {
+            window.location.href = '/api/orders/status/' + orderId;
           }
-        });
+        }
       </script>
     </body>
     </html>
@@ -364,6 +287,36 @@ const renderPaymentSelectionPage = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
+
+const confirmUpiPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    if (order.status.toUpperCase() !== 'PENDING' && order.status.toUpperCase() !== 'PENDING VERIFICATION') {
+       return res.json({ message: 'Already processed' });
+    }
+
+    let cart = [];
+    try { cart = JSON.parse(order.cart_details); } catch(e){}
+
+    const shipCorrectOrderNo = await dispatchToShipCorrect(order, cart);
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'Processing', order_no: shipCorrectOrderNo ? shipCorrectOrderNo.toString() : order.order_no }
+    });
+
+    sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
+
+    res.json({ message: 'Payment Confirmed' });
+  } catch (error) {
+    console.error('Error confirming UPI:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 
 const processCodPayment = async (req, res) => {
   try {
@@ -667,7 +620,7 @@ module.exports = {
   claimUpi,
   dispatchToShipCorrect,
   renderTrackingPage,
-  renderPaymentSelectionPage,
+  confirmUpiPayment,
   processCodPayment,
   getAllOrders,
   deleteOrder,

@@ -475,7 +475,7 @@ const confirmUpiPayment = async (req, res) => {
             data: { order_no: shipCorrectOrderNo.toString() }
           });
         }
-        sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
+        // sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
       } catch (err) {
         console.error('[BACKGROUND SC]', err);
       }
@@ -520,7 +520,7 @@ const processCodPayment = async (req, res) => {
             data: { order_no: shipCorrectOrderNo.toString() }
           });
         }
-        sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
+        // sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
       } catch (err) {
         console.error('[BACKGROUND SC]', err);
       }

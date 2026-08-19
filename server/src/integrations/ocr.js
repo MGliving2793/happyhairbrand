@@ -55,9 +55,9 @@ const verifyAmountInText = (extractedText, requiredAmount) => {
   // Create variations of how the amount might appear
   // e.g. "499", "499.0", "499.00", "₹499", "rs499"
   const regexes = [
-    new RegExp('(?:rs\\\\.?|₹|inr|paid)\\\\s*' + amountStr + '(?:\\\\.00?)?\\\\b', 'i'),
-    new RegExp('\\\\b' + amountStr + '\\\\.00\\\\b', 'i'),
-    new RegExp('₹\\\\s*' + amountStr + '\\\\b', 'i')
+    new RegExp('(?:rs\\.?|₹|inr|paid)\\s*' + amountStr + '(?:\\.00?)?\\b', 'i'),
+    new RegExp('\\b' + amountStr + '\\.00\\b', 'i'),
+    new RegExp('₹\\s*' + amountStr + '\\b', 'i')
   ];
 
   // Check strict regexes first (like ₹499 or 499.00)
@@ -66,7 +66,7 @@ const verifyAmountInText = (extractedText, requiredAmount) => {
   }
 
   // Fallback: If the exact number appears as a standalone word/number in the text
-  const standaloneRegex = new RegExp('\\\\b' + amountStr + '\\\\b');
+  const standaloneRegex = new RegExp('\\b' + amountStr + '\\b');
   if (standaloneRegex.test(text)) return true;
 
   return false;

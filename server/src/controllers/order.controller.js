@@ -641,7 +641,7 @@ const renderTrackingPage = async (req, res) => {
     if (!order) return res.status(404).send('Order not found');
 
     // Fetch tracking details from ShipCorrect
-    let trackingStatus = 'Pending';
+    let trackingStatus = order.status;
     let scanStages = [];
     
     if (order.order_no) {

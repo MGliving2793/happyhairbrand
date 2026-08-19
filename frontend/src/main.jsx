@@ -32,12 +32,25 @@ window.openProductCheckout = (id, title, price, image) => {
   renderCheckout(true, { id, title, price, image });
 };
 
+let defaultProduct = { id: 1, title: 'Happy Hair – Instant Seeds Powder Mix', price: 699, image_url: '/images/w0ut7ai7_WhatsApp%20Image%202026-06-23%20at%2010.55.35%20AM.jpeg' };
+fetch('/api/products')
+  .then(res => res.json())
+  .then(data => {
+      if (data.products && data.products.length > 0) {
+          defaultProduct = data.products[0];
+      }
+  })
+  .catch(console.error);
+
 // Set up the click interceptor
 document.addEventListener('click', function(e) {
   const btn = e.target.closest('button, a, [role="button"]');
   if (btn) {
     // Don't intercept buttons inside our own injected react root (modal, widgets, banners)
     if (btn.closest('#advanced-checkout-root')) return;
+    
+    // Don't intercept social media links even if they have an SVG
+    if (btn.href && (btn.href.includes('instagram.com') || btn.href.includes('facebook.com') || btn.href.includes('twitter.com') || btn.href.includes('x.com'))) return;
     
     const text = btn.textContent.trim().toLowerCase();
     const testId = btn.getAttribute('data-testid') || '';
@@ -52,28 +65,32 @@ document.addEventListener('click', function(e) {
       e.stopPropagation();
       e.stopImmediatePropagation();
       
-      window.openProductCheckout(1, 'Happy Hair – Instant Seeds Powder Mix', 699, '/images/w0ut7ai7_WhatsApp%20Image%202026-06-23%20at%2010.55.35%20AM.jpeg');
+      window.openProductCheckout(defaultProduct.id, defaultProduct.title, defaultProduct.price, defaultProduct.image_url);
     }
   }
 }, true); // Capture phase
 
-// Ultimate Fallback: MutationObserver to block the React Modal if the click interceptor misses it
-const observer = new MutationObserver((mutations) => {
-  for (let m of mutations) {
-    if (m.addedNodes) {
-      m.addedNodes.forEach(node => {
-        if (node.nodeType === 1) {
-          if (node.getAttribute('data-testid') === 'checkout-dialog' || node.querySelector('[data-testid="checkout-dialog"]')) {
-            // Hide the old modal
-            const dialog = node.getAttribute('data-testid') === 'checkout-dialog' ? node : node.querySelector('[data-testid="checkout-dialog"]');
-            if (dialog) dialog.style.display = 'none';
-            
-            // Open the new React modal
-            window.openProductCheckout(1, 'Happy Hair – Instant Seeds Powder Mix', 699, '/images/w0ut7ai7_WhatsApp%20Image%202026-06-23%20at%2010.55.35%20AM.jpeg');
-          }
-        }
-      });
-    }
-  }
-});
+// Optimized Promo Hider & Checkout Blocker
+const hideAnnoyances = () => {
+  // Hide promos
+  document.querySelectorAll('section').forEach(sec => {
+      if (sec.innerText && (sec.innerText.includes('HAIR100') || sec.innerText.includes('Give ₹100 off'))) {
+          sec.style.display = 'none';
+      }
+  });
+  // Block old checkout dialogs
+  document.querySelectorAll('[data-testid="checkout-dialog"]').forEach(dialog => {
+      if (dialog.style.display !== 'none') {
+          dialog.style.display = 'none';
+          window.openProductCheckout(defaultProduct.id, defaultProduct.title, defaultProduct.price, defaultProduct.image_url);
+      }
+  });
+};
+
+hideAnnoyances();
+const observer = new MutationObserver(() => hideAnnoyances());
 observer.observe(document.body, { childList: true, subtree: true });
+
+// Safely disconnect the observer after 10 seconds to save performance, 
+// assuming the page has fully rendered the dynamic content by then.
+setTimeout(() => observer.disconnect(), 10000);

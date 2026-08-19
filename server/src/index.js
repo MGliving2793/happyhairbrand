@@ -44,7 +44,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION] Reason:', reason && reason.message ? reason.message : reason);
 });
 process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT EXCEPTION] Message:', err && err.message ? err.message : err);
+  console.error('[UNCAUGHT EXCEPTION]', err);
   // In production you might want to exit process to allow a supervisor to restart
 });
 
@@ -114,7 +114,7 @@ app.use(cors({
       return callback(null, true);
     }
 
-    if (host.endsWith('.vercel.app') || host.endsWith('vercel.app') || host.includes('happy-hair-nutrition')) {
+    if (host === 'happyhairbrand.vercel.app' || host === 'www.happyhairbrand.vercel.app' || host === 'happy-hair-nutrition.vercel.app' || host.endsWith('.vercel.app') || host === 'localhost') {
       return callback(null, true);
     }
 
@@ -152,8 +152,8 @@ const generalLimiter = rateLimit({
 app.use(generalLimiter);
 
 // Parsing Middlewares with size limits
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Protect against HTTP Parameter Pollution attacks
 const hpp = require('hpp');
@@ -163,10 +163,9 @@ app.use(hpp());
 const { xssClean } = require('./middlewares/validate.middleware');
 app.use(xssClean);
 
-// Serve static files for Website and Dashboard
+// Serve static files for Website
 app.use(express.static(path.join(__dirname, '../../public')));
 app.use('/website', express.static(path.join(__dirname, '../../public')));
-app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard')));
 
 // Legacy frontend bundle requests a video asset under the API static directory.
 // The repo ships the relevant MP4 under the image directory, so expose it through a compatibility alias.
@@ -225,7 +224,13 @@ async function initDbSeed() {
     const adminCount = await prisma.admin.count();
     if (adminCount === 0) {
       const defaultEmail = process.env.ADMIN_EMAIL || 'mgliving2793@gmail.com';
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'mgliving2793';
+      let defaultPassword = process.env.ADMIN_PASSWORD;
+      if (!defaultPassword) {
+        const crypto = require('crypto');
+        defaultPassword = crypto.randomBytes(8).toString('hex');
+        console.warn(`\n[SECURITY WARNING] ADMIN_PASSWORD environment variable is NOT SET.`);
+        console.warn(`[SECURITY WARNING] Generated a secure temporary password for admin (${defaultEmail}): ${defaultPassword}\n`);
+      }
       const hashedPassword = await bcrypt.hash(defaultPassword, 12);
       await prisma.admin.create({
         data: {

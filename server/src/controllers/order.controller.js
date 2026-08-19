@@ -411,6 +411,7 @@ const renderPaymentSelectionPage = async (req, res) => {
 };
 
 const crypto = require('crypto');
+const { extractTextFromImage, verifyAmountInText } = require('../integrations/ocr');
 
 const confirmUpiPayment = async (req, res) => {
   try {
@@ -439,6 +440,18 @@ const confirmUpiPayment = async (req, res) => {
     if (existingHash && existingHash.id !== order.id) {
       return res.status(400).json({ error: 'Duplicate screenshot detected! This receipt has already been used.' });
     }
+
+    // --- OCR Amount Verification ---
+    const extractedText = await extractTextFromImage(receiptBase64);
+    if (extractedText) {
+      const isAmountValid = verifyAmountInText(extractedText, order.total);
+      if (!isAmountValid) {
+        return res.status(400).json({ error: 'Payment amount mismatch! We could not detect a payment of ₹' + order.total + ' in the screenshot. Please upload a clear receipt showing the exact amount.' });
+      }
+    } else {
+      console.warn('[OCR] Failed to extract text for order ' + order.id);
+    }
+    // --------------------------------
 
     let cart = [];
     try { cart = JSON.parse(order.cart_details); } catch(e){}

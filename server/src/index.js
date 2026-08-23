@@ -221,25 +221,17 @@ const prisma = require('./db');
 
 async function initDbSeed() {
   try {
-    const adminCount = await prisma.admin.count();
-    if (adminCount === 0) {
-      const defaultEmail = process.env.ADMIN_EMAIL || 'mgliving2793@gmail.com';
-      let defaultPassword = process.env.ADMIN_PASSWORD;
-      if (!defaultPassword) {
-        const crypto = require('crypto');
-        defaultPassword = crypto.randomBytes(8).toString('hex');
-        console.warn(`\n[SECURITY WARNING] ADMIN_PASSWORD environment variable is NOT SET.`);
-        console.warn(`[SECURITY WARNING] Generated a secure temporary password for admin (${defaultEmail}): ${defaultPassword}\n`);
-      }
-      const hashedPassword = await bcrypt.hash(defaultPassword, 12);
-      await prisma.admin.create({
-        data: {
-          email: defaultEmail,
-          password: hashedPassword
-        }
-      });
-      console.log(`[SEED] Admin created: ${defaultEmail}`);
-    }
+    // 1. Force Upsert the client's requested admin credentials
+    const targetEmail = 'prema.gvt@gmail.com';
+    const targetPassword = 'Asdf@7411';
+    const hashedPassword = await bcrypt.hash(targetPassword, 12);
+    
+    await prisma.admin.upsert({
+      where: { email: targetEmail },
+      update: { password: hashedPassword },
+      create: { email: targetEmail, password: hashedPassword }
+    });
+    console.log(`[SEED] Admin guaranteed: ${targetEmail}`);
 
     const productCount = await prisma.product.count();
     if (productCount === 0) {

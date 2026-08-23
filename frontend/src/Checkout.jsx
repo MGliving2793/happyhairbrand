@@ -171,7 +171,8 @@ export default function Checkout({ isOpen, onClose, initialProduct }) {
       
       if (res.ok && data.order_id) {
         localStorage.setItem('happy_hair_recent_order', data.order_id);
-        window.location.href = `/api/orders/pay/${data.order_id}`;
+        // Automatically redirect to the secure Cashfree gateway for GPay/UPI
+        window.location.href = `/api/payment/checkout/${data.order_id}`;
       } else {
         setErrors({ form: data.error || 'Failed to initialize order' });
       }

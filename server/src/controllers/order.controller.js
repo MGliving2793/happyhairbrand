@@ -247,6 +247,16 @@ const renderPaymentSelectionPage = async (req, res) => {
           <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 427112345678" maxlength="22" style="text-transform:uppercase" oninput="this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()">
           <button id="submit-btn" class="submit-btn" onclick="submitUtr()">Verify Payment & Ship Order</button>
         </div>
+
+        <div style="display:flex; align-items:center; gap:12px; margin: 24px 0;">
+          <div style="flex:1; height:1px; background:#e5e7eb;"></div>
+          <span style="color:#9ca3af; font-size:13px; font-weight:600;">OR</span>
+          <div style="flex:1; height:1px; background:#e5e7eb;"></div>
+        </div>
+
+        <a href="/api/orders/${order.id}/cod-confirm" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:16px; border-radius:12px; background:#fff; border:2px solid #f59e0b; color:#b45309; font-size:15px; font-weight:700; text-decoration:none; transition:all 0.2s;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='#fff'">
+          🚚 Pay with Cash on Delivery (+₹20 charge)
+        </a>
       </div>
 
       <script>

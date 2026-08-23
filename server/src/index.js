@@ -63,7 +63,11 @@ const defaultAllowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:3000',
   'https://happy-hair-nutrition.vercel.app',
-  'https://www.happy-hair-nutrition.vercel.app'
+  'https://www.happy-hair-nutrition.vercel.app',
+  'https://happyhairbrand.vercel.app',
+  'https://dashboard-admin-ashy-three.vercel.app',
+  'https://mgrokart.online',
+  'https://www.mgrokart.online'
 ];
 
 const configuredOrigins = process.env.ALLOWED_ORIGINS

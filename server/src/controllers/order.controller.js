@@ -239,53 +239,54 @@ const renderPaymentSelectionPage = async (req, res) => {
         </div>
 
         <div class="utr-section">
-          <div class="utr-title">Step 2: Enter 12-Digit UTR Number</div>
-          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">After paying, find the 12-digit UTR/Reference No. in your app and paste it below.</p>
+          <div class="utr-title">Step 2: Enter UTR / Reference Number</div>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">After paying, find the UTR/Transaction Reference No. in your payment app (it usually has 12-22 digits/letters) and paste it below.</p>
           
           <div id="error-msg" class="error-msg"></div>
           
-          <input type="text" id="utr-input" class="utr-input" placeholder="000000000000" maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 427112345678" maxlength="22" style="text-transform:uppercase" oninput="this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()">
           <button id="submit-btn" class="submit-btn" onclick="submitUtr()">Verify Payment & Ship Order</button>
         </div>
       </div>
 
       <script>
+        var ORDER_ID = ${order.id};
         async function submitUtr() {
-          const utr = document.getElementById('utr-input').value;
-          const errorMsg = document.getElementById('error-msg');
-          const btn = document.getElementById('submit-btn');
+          var utr = document.getElementById('utr-input').value.trim();
+          var errorMsg = document.getElementById('error-msg');
+          var btn = document.getElementById('submit-btn');
           
           errorMsg.style.display = 'none';
           
-          if (utr.length !== 12) {
-            errorMsg.innerText = 'UTR must be exactly 12 digits long.';
+          if (utr.length < 8 || utr.length > 22) {
+            errorMsg.innerText = 'UTR must be 8-22 characters (letters and digits only).';
             errorMsg.style.display = 'block';
             return;
           }
 
           btn.disabled = true;
-          btn.innerText = 'Verifying Smart UTR...';
+          btn.innerText = 'Verifying...';
 
           try {
-            const res = await fetch('/api/orders/${order.id}/confirm-utr-payment', {
+            var res = await fetch('/api/orders/' + ORDER_ID + '/confirm-utr-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ utr })
+              body: JSON.stringify({ utr: utr })
             });
-            const data = await res.json();
+            var data = await res.json();
             
             if (res.ok) {
               btn.innerText = 'Verified! Redirecting...';
               btn.style.background = '#16a34a';
-              window.location.href = `/api/orders/status/${order.id}`;
+              window.location.href = '/api/orders/status/' + ORDER_ID;
             } else {
-              errorMsg.innerText = data.error || 'Verification failed.';
+              errorMsg.innerText = data.error || 'Verification failed. Please try again.';
               errorMsg.style.display = 'block';
               btn.disabled = false;
               btn.innerText = 'Verify Payment & Ship Order';
             }
           } catch (e) {
-            errorMsg.innerText = 'Network error. Try again.';
+            errorMsg.innerText = 'Network error. Please check your connection and try again.';
             errorMsg.style.display = 'block';
             btn.disabled = false;
             btn.innerText = 'Verify Payment & Ship Order';
@@ -308,8 +309,8 @@ const confirmUtrPayment = async (req, res) => {
     const { id } = req.params;
     const { utr } = req.body;
     
-    if (!utr || utr.length !== 12 || !/^\d{12}$/.test(utr)) {
-      return res.status(400).json({ error: 'Invalid UTR format. Must be exactly 12 digits.' });
+    if (!utr || utr.length < 8 || utr.length > 22 || !/^[a-zA-Z0-9]+$/.test(utr)) {
+      return res.status(400).json({ error: 'Invalid UTR format. Must be 8-22 letters/digits.' });
     }
 
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });

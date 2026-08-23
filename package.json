@@ -22,5 +22,12 @@
     "nodemailer": "^6.9.13",
     "prisma": "^5.22.0",
     "zod": "^4.4.3"
+  },
+  "allowedScripts": {
+    "@prisma/client": true,
+    "@prisma/engines": true,
+    "prisma": true,
+    "bcrypt": true,
+    "unrs-resolver": true
   }
 }

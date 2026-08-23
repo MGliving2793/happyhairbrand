@@ -23,11 +23,13 @@
     "prisma": "^5.22.0",
     "zod": "^4.4.3"
   },
-  "allowedScripts": {
+  "allowScripts": {
     "@prisma/client": true,
     "@prisma/engines": true,
     "prisma": true,
     "bcrypt": true,
-    "unrs-resolver": true
+    "bcryptjs": true,
+    "unrs-resolver": true,
+    "esbuild": true
   }
 }

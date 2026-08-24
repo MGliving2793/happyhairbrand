@@ -34,7 +34,7 @@ const createOrder = async (order, cart) => {
     pay_mode: (order.pay_mode && order.pay_mode.toUpperCase() === 'COD') ? 'COD' : 'PREPAID',
     quantity: quantity,
     total_amount: order.total ? order.total.toString() : '0',
-    client_order_no: order.id.toString(),
+    client_order_no: "HH-" + order.id.toString(),
     length: 10,
     breadth: 10,
     height: 5,

@@ -7,12 +7,16 @@ const createOrder = async (order, cart) => {
   const productName = cart && cart.length > 0 ? cart.map(item => item.title).join(', ').substring(0, 50) : 'Happy Hair Product';
   const sku = (cart && cart.length > 0 && cart[0].SKU) ? cart[0].SKU : 'SKU-HAPPY-HAIR';
   const quantity = cart && cart.length > 0 ? cart.reduce((sum, item) => sum + parseInt(item.quantity || 1), 0).toString() : '1';
+  let address1 = order.address || "Main Street";
+  while (address1.length < 20) {
+    address1 += " - IN";
+  }
 
   const payload = {
     api_key: shipcorrectApiKey,
     customer_name: order.customer_name,
-    customer_email: order.email || "",
-    customer_address1: order.address || "Main Street",
+    customer_email: order.email || "support@happyhair.com",
+    customer_address1: address1,
     customer_address2: "",
     customer_address_landmark: "",
     customer_address_state: order.state || "State",

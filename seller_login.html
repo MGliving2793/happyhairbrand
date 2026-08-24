@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="apple-touch-icon" sizes="76x76" href="../argon-dashboard-pro-html-v2.0.5/assets/img/apple-icon.png">
+    <link rel="icon" type="image/png" href="../argon-dashboard-pro-html-v2.0.5/assets/img/favicon.png">
+    <title> Log In </title>
+   
+    <!--     Fonts and icons     -->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet" />
+    <!-- Nucleo Icons -->
+    <link href="../argon-dashboard-pro-html-v2.0.5/assets/css/nucleo-icons.css" rel="stylesheet" />
+    <link href="../argon-dashboard-pro-html-v2.0.5/assets/css/nucleo-svg.css" rel="stylesheet" />
+    <!-- Font Awesome Icons -->
+    <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
+    <link href="../argon-dashboard-pro-html-v2.0.5/assets/css/nucleo-svg.css" rel="stylesheet" />
+    <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
+    <script src="../argon-dashboard-pro-html-v2.0.5/assets/js/argon-dashboard.min.js?v=2.0.5"></script>
+    <!-- CSS Files -->
+    <link id="pagestyle" href="../argon-dashboard-pro-html-v2.0.5/assets/css/argon-dashboard.css?v=2.0.5" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css" integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
+
+  <!-- <script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  // Mobile only
+  if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+
+  var appLink = "https://shipcorrect.com/App-download.php";
+
+  // Create banner
+  var banner = document.createElement("div");
+  banner.style.cssText = `
+    position: fixed;
+    bottom: 520px;
+    left: 12px;
+    right: 12px;
+    background: #004ab0ff;
+    color: #fff;
+    padding: 14px 14px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 99999;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  `;
+
+  banner.innerHTML = `
+    <div style="max-width: 70%;">
+      <div style="font-weight: 700; font-size: 14px;">
+        Get the ShipCorrect App 🚀
+      </div>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">
+        Track orders & manage shipments faster
+      </div>
+      <div style="font-size: 12px; margin-top: 4px; font-weight: 600; color: #FFD700;">
+        🎁 25% extra credit up to ₹2500 on first recharge from APP
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center;">
+      <button id="scGetApp" style="
+        background:#fff;
+        color:#0047AB;
+        border:none;
+        padding:6px 10px;
+        border-radius:8px;
+        font-size:12px;
+        font-weight:600;
+        margin-right:8px;
+        cursor:pointer;
+      ">
+        Get App
+      </button>
+
+      <button id="scClose" style="
+        background:none;
+        color:#fff;
+        border:none;
+        font-size:20px;
+        line-height:1;
+        cursor:pointer;
+      ">
+        ×
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(banner);
+
+  document.getElementById("scGetApp").onclick = function () {
+    window.open(appLink, "_blank");
+  };
+
+  document.getElementById("scClose").onclick = function () {
+    banner.remove();
+    localStorage.setItem("shipcorrect_app_banner_closed", "1");
+  };
+});
+</script> -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        return;
+    }
+
+     const expiry = localStorage.getItem("shipcorrect_app_modal_closed");
+     if (expiry && Date.now() < parseInt(expiry)) {
+         return;
+     }
+
+    // Add keyframe animation to document
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+        position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+        display:flex; align-items:center; justify-content:center;
+        z-index:999999; padding:20px; box-sizing:border-box;
+    `;
+
+    const modal = document.createElement("div");
+    modal.style.cssText = `
+        width:100%; max-width:360px; background:#ffffff;
+        border-radius:24px; text-align:center;
+        font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        position:relative; padding:32px 24px 24px; box-sizing:border-box;
+    `;
+
+    modal.innerHTML = `
+        <button id="closeModalBtn" style="
+            position:absolute; top:16px; right:16px; width:32px; height:32px;
+            border:none; background:#f1f5f9; border-radius:50%;
+            font-size:20px; color:#64748b; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; padding:0;
+        ">&times;</button>
+
+        <!-- Brand Logo Container -->
+        <div style="
+            width: 72px; 
+            height: 72px; 
+            margin: 0 auto 16px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            background: transparent;
+        ">
+            <img src="https://shipcorrect.com/shipcorrect/ShipCorrect%20final%202/logo_02.jpg" 
+                alt="ShipCorrect Logo" 
+                style="width: 100%; height: 100%; object-fit: contain;"
+            />
+        </div>
+
+
+        <h3 style="margin:0 0 8px; font-size:20px; font-weight:700; color:#0f172a; letter-spacing:-0.5px;">
+            Get ShipCorrect App
+        </h3>
+        
+        <p style="margin:0 0 20px; font-size:14px; color:#64748b; line-height:1.5;">
+            Track your orders and manage all your shipments faster on the go.
+        </p>
+
+        <div style="
+            background:#fef3c7; color:#92400e; padding:12px 16px;
+            border-radius:12px; font-weight:600; margin-bottom:24px;
+            font-size:13px; line-height:1.4; text-align:left; border-left:4px solid #f59e0b;
+        ">
+            🎁 25% Extra Credit up to ₹2500 on your first recharge via the app!
+        </div>
+
+        <button id="downloadAppBtn" style="
+            background:#0047AB; color:#ffffff; border:none;
+            padding:14px; border-radius:12px; font-size:16px;
+            font-weight:600; cursor:pointer; width:100%;
+            box-shadow:0 4px 6px -1px rgba(0, 71, 171, 0.2);
+            transition: background 0.2s;
+        ">
+            Get App
+        </button>
+    `;
+
+    overlay.appendChild(modal);
+
+    let appOpened = false;
+
+    window.addEventListener("blur", function () {
+        appOpened = true;
+    });
+
+    // Try opening app on page load
+    window.location.href = "shipcorrect://login";
+
+    setTimeout(function () {
+
+        // If app opened, don't show modal
+        if (appOpened || document.hidden) {
+            return;
+        }
+
+        document.body.appendChild(overlay);
+
+        document.getElementById("downloadAppBtn").addEventListener("click", function () {
+            window.location.href = "shipcorrect://login";
+
+            setTimeout(function () {
+                window.location.href = "https://shipcorrect.com/App-download.php";
+            }, 1500);
+        });
+
+        document.getElementById("closeModalBtn").addEventListener("click", function () {
+            overlay.remove();
+            localStorage.setItem("shipcorrect_app_modal_closed", Date.now() + (30 * 60 * 1000));
+        });
+
+    }, 100);
+});
+</script>
+  <body class="">
+
+    <div class="container position-sticky z-index-sticky top-0">
+      <div class="row">
+        <div class="col-12">
+          <!-- End Navbar -->
+        </div>
+      </div>
+    </div>
+    <main class="main-content  mt-0">
+      <section>
+        <div class="page-header min-vh-100">
+          <div class="container">
+            <div class="row">
+              <div class=" col-xl-7 col-lg-7 col-md-5 d-lg-flex d-none h-100 my-auto pe-0 position-absolute top-0 start-0 text-center justify-content-center flex-column">
+                <div class="position-relative bg-gradient-primary h-100 m-3 px-7 border-radius-lg d-flex flex-column justify-content-center overflow-hidden" style="background-image: url('https://shipcorrect.com/shipcorrect/images/login-img2.jpg');
+                    background-size: 100% 100%;">
+                  <span class="mask bg-primary opacity-2"></span>
+                </div>
+              </div>
+              <div class="col-xl-4 col-lg-4 col-md-7 d-flex justify-content-center flex-column h-100 my-auto pe-0 position-absolute top-0 end-3 mx-lg-0 mx-auto">
+                <div class="card card-plain">
+                  <div class="card-header pb-0 text-left">
+                    <div class="text-center">
+                      <img src="../ShipCorrect final 2/logo-02.jpg" class="d-block mx-auto cursor-pointer" width="250" />
+                    </div>
+                    <h5 class="font-weight-bolder mt-4 text-center">Login To Start Shipping</h5>
+                    <!-- <p class="mb-0">Enter your email and password to register</p> -->
+                  </div>
+                  <div class="card-body pb-2">
+                    <form role="form">
+                      <label>Email</label>
+                      <div class="mb-2">
+                        <input type="email" name="seller_email" id="email" placeholder="Enter Contact Email ID" class="form-control" oninput="validateEmail()" required>
+                        <div class="invalid-feedback text-xxs" data-input-id="email" id="email-error" style="display: none;"></div>
+                      </div>
+                      <label>Password</label>
+                      <div class="input-group mb-2">
+                        <input type="password" name="seller_password" id="password" placeholder="Enter Password" class="form-control" required>
+                        <button class="btn btn-outline-primary mb-0" type="button" id="togglePassword">
+                          <i class="fa fa-eye"></i>
+                        </button>
+                        <div class="invalid-feedback text-xxs" data-input-id="password" id="password-error" style="display: none;"></div>
+                      </div>
+                      <div class="form-check form-check-info text-left">
+                        <input class="form-check-input" type="checkbox" value="1" id="rememberMe" checked>
+                        <label class="form-check-label" for="flexCheckDefault">Remember Me
+                        </label>
+                      </div>
+                      <div class="form-check form-check-info text-left">
+                        <input class="form-check-input" type="checkbox" value="" id="flexCheckDefault" checked>
+                        <label class="form-check-label" for="flexCheckDefault"> I agree the <a href="../seller_terms.php" target="_blank" class="text-dark font-weight-bolder">Terms and Conditions</a>
+                        </label>
+                      </div>
+                      <div class="form-check form-check-info text-left">
+                      <label class="form-check-label" for="flexCheckDefault">
+                        <a href="reset-password.php" class="text-dark font-weight-bolder">Forgot Password?</a>
+                      </label>
+                      </div>
+                      <div class="text-center">
+                        <button type="submit" class="btn btn-primary w-70 mt-4 mb-0">Login In</button>
+                      </div>
+                    </form>
+                  </div>
+                  <div class="card-footer text-center pt-0 px-sm-4 px-1">
+                    <p class="mb-4 mx-auto"> New to ShipCorrect? <a href="../Signup.php" class="text-primary font-weight-bolder">Sign Up</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-body text-center">
+            <i class="fas fa-exclamation-circle fa-4x text-danger"></i>
+            <p id="errorMessage" class="mt-2">Error Occurred. Please try again.</p>
+            <button type="button" class="btn btn-primary" id="errorModalRetryButton">Retry</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-body text-center">
+            <i class="fas fa-check-circle fa-4x text-success"></i>
+            <p class="mt-2" id="successMessage">SignUp Successful! Proceed to login.</p>
+            <button type="button" class="btn btn-primary" id="successModalNextButton">Next Step</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+    $(document).ready(function() {
+        $("#togglePassword").click(function() {
+            var passwordInput = $("#password");
+            var type = passwordInput.attr("type");
+            if (type === "password") {
+                passwordInput.attr("type", "text");
+            } else {
+                passwordInput.attr("type", "password");
+            }
+        });
+        // Handle form submission
+        $("form").submit(function(event) {
+            // Prevent the form from submitting initially
+            event.preventDefault();
+            // Validate each field
+            validateEmail();
+            //   validatePassword();
+            // Check if any field has errors
+            if ($(".is-invalid").length === 0) {
+                // If no errors, collect input variables
+                var formData = {
+                    username: $("#email").val(),
+                    password: $("#password").val(),
+                    remember_me: $("#rememberMe").is(":checked") ? 1 : 0, // Add remember_me checkbox value
+                    login_source: "seller_login_page"
+                };
+                // Log formData and pause execution
+                console.log("Form Data:", formData);
+                // debugger; // This will pause script execution in the developer tool
+                
+                // Send AJAX request to checkSignup.php
+                $.ajax
+                ({
+                    type: "POST",
+                    url: "checksellerlogin.php",
+                    data: formData,
+                    success: function(response) {
+                        // Handle the response from the server
+                        response = JSON.parse(response);
+                        if (response.success == true) 
+                        {
+                            console.log(response);
+                            successMessage = response.message;
+                            // Send additional request to set PHP $_SESS  ION variables
+                            $.ajax({
+                                type: "POST",
+                                url: "set_session.php", // replace with the actual PHP script path
+                                data: {
+                                    username: response.username,
+                                    seller_id: response.seller_id,
+                                    seller_name: response.seller_name,
+                                    kyc_status: response.kyc_status,
+                                    login_status: response.login_status,
+                                    check: response.check
+                                },
+                                success: function(phpResponse) {
+                                    phpResponse = JSON.parse(phpResponse);
+                                    console.log(phpResponse);
+                                    if (phpResponse.kyc_status == "false") {
+                                        // console.log("will go to kyc page");
+                                        window.location.replace('./kyc/verify-mobile.php');
+                                    } else {
+                                        // console.log("will go to index page");
+                                        window.location.replace('index.php');
+                                    }
+                                    // You can handle the response from the set_session.php script if needed
+                                },
+                                error: function(error) {
+                                    console.error(error);
+                                }
+                            });
+                            // $("#successModal").modal("show");
+                            // $("#successMessage").text(successMessage);
+                            // $("#successModalNextButton").on("click", function () {
+                            //     // Send AJAX request to ../seller/checksellerlogin.php
+                            //     // console.log(loginData);
+                            //     // window.location.replace('../seller/index.php');
+                            // });
+                        } 
+                        else 
+                        {
+                            // console.log(response);
+                            errorMessage = response.message;
+                            // Show the error modal with a retry button
+                            $("#errorModal").modal("show");
+                            $("#errorModalRetryButton").on("click", function() 
+                            {
+                                location.reload();
+                            });
+                            $("#errorMessage").text(errorMessage);
+                        }
+                    },
+                    error: function(error) {
+                        // Handle the error
+                        console.error(error);
+                    },
+                });
+            } else {
+                // If there are errors, focus on the first field with an error
+                $(".is-invalid:first").focus();
+            }
+        });
+    });
+
+function validatePassword() {
+    const passwordInput = document.getElementById('password');
+    const passwordError = document.getElementById('password-error');
+    // Get the entered password
+    const password = passwordInput.value;
+    // Define a regular expression for password validation
+    const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    // Check if it matches the pattern
+    if (regex.test(password)) {
+        passwordInput.classList.remove('is-invalid');
+        passwordInput.classList.add('is-valid');
+        passwordError.style.display = 'none';
+    } else {
+        passwordInput.classList.remove('is-valid');
+        passwordInput.classList.add('is-invalid');
+        passwordError.style.display = 'block';
+        passwordError.textContent = 'Password must contain at least one uppercase letter, one lowercase letter, one number, one special character, and be at least 8 characters long.';
+    }
+}
+
+function validateEmail() {
+    const emailInput = document.getElementById('email');
+    const emailError = document.getElementById('email-error');
+    // Get the entered email address
+    const email = emailInput.value.trim(); // Trim whitespace from the beginning and end
+    // Define a regular expression for email validation
+    const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+    // Check if it matches the pattern
+    if (regex.test(email)) {
+        emailInput.classList.remove('is-invalid');
+        emailInput.classList.add('is-valid');
+        emailError.style.display = 'none';
+    } else {
+        emailInput.classList.remove('is-valid');
+        emailInput.classList.add('is-invalid');
+        emailError.style.display = 'block';
+        emailError.textContent = 'Please enter a valid email address.';
+    }
+} 
+</script>
+    <!--   Core JS Files   -->
+    <script src="../argon-dashboard-pro-html-v2.0.5/assets/js/core/popper.min.js"></script>
+    <script src="../argon-dashboard-pro-html-v2.0.5/assets/js/core/bootstrap.min.js"></script>
+    <script src="../argon-dashboard-pro-html-v2.0.5/assets/js/plugins/perfect-scrollbar.min.js"></script>
+    <script src="../argon-dashboard-pro-html-v2.0.5/assets/js/plugins/smooth-scrollbar.min.js"></script>
+    <!-- Kanban scripts -->
+    <script src="../argon-dashboard-pro-html-v2.0.5/assets/js/plugins/dragula/dragula.min.js"></script>
+    <script src="../argon-dashboard-pro-html-v2.0.5/assets/js/plugins/jkanban/jkanban.js"></script>
+    <!-- Github buttons -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+  </body>
+</html>

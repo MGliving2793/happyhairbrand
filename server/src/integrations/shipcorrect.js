@@ -38,7 +38,7 @@ const createOrder = async (order, cart) => {
   };
 
   try {
-    const shipcorrectUrl = baseUrl.endsWith('/') ? `${baseUrl}createForwardOrder.php` : `${baseUrl}/createForwardOrder.php`;
+    const shipcorrectUrl = baseUrl.endsWith('/') ? `${baseUrl}create_order_b2c.php` : `${baseUrl}/create_order_b2c.php`;
     const response = await axios.post(shipcorrectUrl, payload, { headers: { 'Content-Type': 'application/json' }, timeout: 8000 });
 
     if (response.data && (response.data.status === 'success' || response.data.order_no)) {
@@ -46,6 +46,7 @@ const createOrder = async (order, cart) => {
     }
 
     // Fallback
+    console.warn('[SHIPCORRECT] Error from API:', response.data);
     return `SC-${order.id}-${Math.floor(100000 + Math.random() * 900000)}`;
   } catch (err) {
     console.warn('[SHIPCORRECT CONNECTIVITY]', err.message, '- Using fallback order tracking reference');

@@ -199,40 +199,53 @@ router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }
     try { payload = JSON.parse(rawBody.toString()); } catch (e) { payload = req.body; }
 
     // Determine Cashfree order id from payload (try common keys)
-    const cfOrderId = payload?.order_id || payload?.orderId || payload?.orderId || payload?.cf_order_id || payload?.cfOrderId || payload?.reference_id || payload?.reference;
-    const cfStatus = payload?.order_status || payload?.txStatus || payload?.status || payload?.payment_status || payload?.transaction_status;
+    const cfOrderId = payload?.data?.order?.order_id || payload?.order_id || payload?.orderId || payload?.cf_order_id || payload?.reference_id;
+    const cfStatus = payload?.data?.order?.order_status || payload?.order_status || payload?.txStatus || payload?.status || payload?.payment_status;
+    const cfAmount = payload?.data?.order?.order_amount || payload?.order_amount || 0;
 
-    // Attempt to find matching DB order by utr (we stored cf_order_id in utr earlier)
     let order = null;
-    if (cfOrderId) {
-      order = await prisma.order.findFirst({ where: { utr: cfOrderId } });
-    }
 
-    // Fallback: sometimes cfOrderId stored in different field — try matching by order id if provided in query
-    if (!order && payload?.client_order_no) {
-      const clientOrder = parseInt(payload.client_order_no);
-      if (!isNaN(clientOrder)) order = await prisma.order.findUnique({ where: { id: clientOrder } });
+    // We generate cfOrderId as "order_{ID}_{RANDOM}"
+    // Securely extract the ID from it:
+    if (cfOrderId && cfOrderId.startsWith('order_')) {
+      const parts = cfOrderId.split('_');
+      if (parts.length >= 2) {
+        const extractedId = parseInt(parts[1]);
+        if (!isNaN(extractedId)) {
+          order = await prisma.order.findUnique({ where: { id: extractedId } });
+        }
+      }
     }
 
     // If order found and status indicates success, mark as paid/processing and dispatch
     const paidStatuses = ['PAID', 'SUCCESS', 'COMPLETED', 'TXN_SUCCESS'];
     if (order && cfStatus && paidStatuses.includes(cfStatus.toString().toUpperCase())) {
-      // Update order status and store reference
-      await prisma.order.update({ where: { id: order.id }, data: { status: 'Processing', utr: cfOrderId } });
+      
+      // STRICT SECURITY VERIFICATION: Ensure amounts match!
+      if (parseFloat(cfAmount) > 0 && parseFloat(cfAmount) < parseFloat(order.total)) {
+        console.error(`[WEBHOOK SECURITY] Partial payment spoof attempt! Paid ${cfAmount} but expected ${order.total} for order ${order.id}`);
+        return res.status(400).send('Security verification failed. Amount mismatch.');
+      }
 
-      // Dispatch to ShipCorrect (non-blocking)
-      (async () => {
-        try {
-          let cart = [];
-          try { cart = JSON.parse(order.cart_details); } catch (e) {}
-          const shipNo = await shipcorrectIntegration.createOrder(order, cart);
-          if (shipNo) await prisma.order.update({ where: { id: order.id }, data: { order_no: shipNo.toString() } });
-          // Send confirmation email
-          await sendOrderConfirmationEmail(order, shipNo);
-        } catch (err) {
-          console.error('[WEBHOOK] Post-payment dispatch failed:', err.message);
-        }
-      })();
+      // Avoid duplicate dispatch
+      if (order.status !== 'PAID' && order.status !== 'Processing' && order.status !== 'Shipped' && order.status !== 'Delivered') {
+        // Update order status and store reference
+        await prisma.order.update({ where: { id: order.id }, data: { status: 'Processing', utr: cfOrderId } });
+
+        // Dispatch to ShipCorrect (non-blocking)
+        (async () => {
+          try {
+            let cart = [];
+            try { cart = JSON.parse(order.cart_details); } catch (e) {}
+            const shipNo = await shipcorrectIntegration.createOrder(order, cart);
+            if (shipNo) await prisma.order.update({ where: { id: order.id }, data: { order_no: shipNo.toString() } });
+            // Send confirmation email
+            await sendOrderConfirmationEmail(order, shipNo);
+          } catch (err) {
+            console.error('[WEBHOOK] Post-payment dispatch failed:', err.message);
+          }
+        })();
+      }
 
       return res.json({ status: 'ok' });
     }
@@ -268,7 +281,21 @@ router.get('/verify/:orderId', async (req, res) => {
     const cfOrder = await cashfreeIntegration.getOrder(cf_order_id);
 
     // Handle different statuses
-    if (cfOrder.order_status === 'PAID') {
+    if (cfOrder.order_status === 'PAID' || cfOrder.order_status === 'SUCCESS') {
+      
+      // STRICT SECURITY VERIFICATION:
+      // 1. Ensure the Cashfree order truly belongs to THIS local order (prevent cross-order spoofing)
+      if (!cfOrder.order_id.startsWith(`order_${order.id}_`)) {
+        console.error(`[SECURITY] Spoof attempt! Tried to apply CF Order ${cfOrder.order_id} to local Order ${order.id}`);
+        return res.status(400).send('Security verification failed. Order ID mismatch.');
+      }
+      
+      // 2. Ensure the paid amount matches the requested total
+      if (parseFloat(cfOrder.order_amount) < parseFloat(order.total)) {
+        console.error(`[SECURITY] Partial payment spoof! Paid ${cfOrder.order_amount} but expected ${order.total}`);
+        return res.status(400).send('Security verification failed. Amount mismatch.');
+      }
+
       // Avoid re-processing if already paid
       if (order.status !== 'PAID' && order.status !== 'Processing' && order.status !== 'Shipped' && order.status !== 'Delivered') {
         

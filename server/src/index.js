@@ -44,7 +44,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION] Reason:', reason && reason.message ? reason.message : reason);
 });
 process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT EXCEPTION] Message:', err && err.message ? err.message : err);
+  console.error('[UNCAUGHT EXCEPTION]', err);
   // In production you might want to exit process to allow a supervisor to restart
 });
 
@@ -63,7 +63,11 @@ const defaultAllowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:3000',
   'https://happy-hair-nutrition.vercel.app',
-  'https://www.happy-hair-nutrition.vercel.app'
+  'https://www.happy-hair-nutrition.vercel.app',
+  'https://happyhairbrand.vercel.app',
+  'https://dashboard-admin-ashy-three.vercel.app',
+  'https://mgrokart.online',
+  'https://www.mgrokart.online'
 ];
 
 const configuredOrigins = process.env.ALLOWED_ORIGINS
@@ -114,7 +118,7 @@ app.use(cors({
       return callback(null, true);
     }
 
-    if (host.endsWith('.vercel.app') || host.endsWith('vercel.app') || host.includes('happy-hair-nutrition')) {
+    if (host === 'happyhairbrand.vercel.app' || host === 'www.happyhairbrand.vercel.app' || host === 'happy-hair-nutrition.vercel.app' || host.endsWith('.vercel.app') || host === 'localhost') {
       return callback(null, true);
     }
 
@@ -152,8 +156,8 @@ const generalLimiter = rateLimit({
 app.use(generalLimiter);
 
 // Parsing Middlewares with size limits
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Protect against HTTP Parameter Pollution attacks
 const hpp = require('hpp');
@@ -163,10 +167,9 @@ app.use(hpp());
 const { xssClean } = require('./middlewares/validate.middleware');
 app.use(xssClean);
 
-// Serve static files for Website and Dashboard
+// Serve static files for Website
 app.use(express.static(path.join(__dirname, '../../public')));
 app.use('/website', express.static(path.join(__dirname, '../../public')));
-app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard')));
 
 // Legacy frontend bundle requests a video asset under the API static directory.
 // The repo ships the relevant MP4 under the image directory, so expose it through a compatibility alias.
@@ -222,19 +225,17 @@ const prisma = require('./db');
 
 async function initDbSeed() {
   try {
-    const adminCount = await prisma.admin.count();
-    if (adminCount === 0) {
-      const defaultEmail = process.env.ADMIN_EMAIL || 'mgliving2793@gmail.com';
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'mgliving2793';
-      const hashedPassword = await bcrypt.hash(defaultPassword, 12);
-      await prisma.admin.create({
-        data: {
-          email: defaultEmail,
-          password: hashedPassword
-        }
-      });
-      console.log(`[SEED] Admin created: ${defaultEmail}`);
-    }
+    // 1. Force Upsert the client's requested admin credentials
+    const targetEmail = 'prema.gvt@gmail.com';
+    const targetPassword = 'Asdf@7411';
+    const hashedPassword = await bcrypt.hash(targetPassword, 12);
+    
+    await prisma.admin.upsert({
+      where: { email: targetEmail },
+      update: { password: hashedPassword },
+      create: { email: targetEmail, password: hashedPassword }
+    });
+    console.log(`[SEED] Admin guaranteed: ${targetEmail}`);
 
     const productCount = await prisma.product.count();
     if (productCount === 0) {

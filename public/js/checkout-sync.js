@@ -326,13 +326,12 @@
             <div class="dyn-form-group" style="flex:1; min-width:200px;">
               <label>Payment Method</label>
               <select id="dyn-paymode" onchange="window.updateDynCheckoutTotal()">
-                <option value="UPI">⚡ UPI (GPay, PhonePe, Paytm) via Cashfree</option>
-                <option value="PREPAID">💳 Cards / NetBanking via Cashfree Secure</option>
+                <option value="PREPAID">⚡ Scan QR & Pay via UPI App</option>
                 <option value="COD">📦 Cash on Delivery (+₹20)</option>
               </select>
-              <div id="cashfree-badge" class="cashfree-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                Secured by Cashfree
+              <div id="cashfree-badge" class="cashfree-badge" style="color: #10b981; background: #ecfdf5;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                100% Secure Payment
               </div>
             </div>
           </div>
@@ -512,9 +511,9 @@
         window.closeDynCheckout();
         if (data.checkout_url) {
           window.location.href = data.checkout_url;
-        } else if (data.shipCorrectOrderNo || data.order_id) {
-          alert(`Order Placed Successfully!\nOrder ID: #${data.order_id}\nShipping Ref: ${data.shipCorrectOrderNo || 'Generated'}`);
-          window.location.reload();
+        } else if (data.order_id) {
+          // Redirect to payment selection page which shows QR and UPI link
+          window.location.href = '/api/orders/pay/' + data.order_id;
         } else {
           alert('Order placed successfully!');
         }

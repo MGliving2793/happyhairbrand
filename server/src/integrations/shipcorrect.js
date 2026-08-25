@@ -1,24 +1,22 @@
 const axios = require('axios');
 
 const createOrder = async (order, cart) => {
-  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || '';
-  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://shipcorrect.com/api';
-
-  // If running tests or if API key is not configured, return a safe local reference
-  const useLocalReference = process.env.NODE_ENV === 'test' || !shipcorrectApiKey || shipcorrectApiKey === 'default_shipcorrect_key' || shipcorrectApiKey.toLowerCase().includes('your_');
-  if (useLocalReference) {
-    return `SC-${order.id}-${Math.floor(100000 + Math.random() * 900000)}`;
-  }
+  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || 'dd2b48e36cf8eb837d7b';
+  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://www.shipcorrect.com/api';
 
   const productName = cart && cart.length > 0 ? cart.map(item => item.title).join(', ').substring(0, 50) : 'Happy Hair Product';
   const sku = (cart && cart.length > 0 && cart[0].SKU) ? cart[0].SKU : 'SKU-HAPPY-HAIR';
   const quantity = cart && cart.length > 0 ? cart.reduce((sum, item) => sum + parseInt(item.quantity || 1), 0).toString() : '1';
+  let address1 = order.address || "Main Street";
+  while (address1.length < 20) {
+    address1 += " - IN";
+  }
 
   const payload = {
     api_key: shipcorrectApiKey,
     customer_name: order.customer_name,
-    customer_email: order.email || "",
-    customer_address1: order.address || "Main Street",
+    customer_email: order.email || "support@happyhair.com",
+    customer_address1: address1,
     customer_address2: "",
     customer_address_landmark: "",
     customer_address_state: order.state || "State",
@@ -36,15 +34,15 @@ const createOrder = async (order, cart) => {
     pay_mode: (order.pay_mode && order.pay_mode.toUpperCase() === 'COD') ? 'COD' : 'PREPAID',
     quantity: quantity,
     total_amount: order.total ? order.total.toString() : '0',
-    client_order_no: order.id.toString(),
+    client_order_no: "HH-" + order.id.toString(),
     length: 10,
     breadth: 10,
     height: 5,
-    pickup_id: "WH-001"
+    pickup_id: process.env.SHIPCORRECT_PICKUP_ID || "104425"
   };
 
   try {
-    const shipcorrectUrl = baseUrl.endsWith('/') ? `${baseUrl}createForwardOrder.php` : `${baseUrl}/createForwardOrder.php`;
+    const shipcorrectUrl = baseUrl.endsWith('/') ? `${baseUrl}create_order_b2c.php` : `${baseUrl}/create_order_b2c.php`;
     const response = await axios.post(shipcorrectUrl, payload, { headers: { 'Content-Type': 'application/json' }, timeout: 8000 });
 
     if (response.data && (response.data.status === 'success' || response.data.order_no)) {
@@ -52,6 +50,7 @@ const createOrder = async (order, cart) => {
     }
 
     // Fallback
+    console.warn('[SHIPCORRECT] Error from API:', response.data);
     return `SC-${order.id}-${Math.floor(100000 + Math.random() * 900000)}`;
   } catch (err) {
     console.warn('[SHIPCORRECT CONNECTIVITY]', err.message, '- Using fallback order tracking reference');
@@ -60,8 +59,8 @@ const createOrder = async (order, cart) => {
 };
 
 const trackOrder = async (order_no) => {
-  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || '';
-  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://shipcorrect.com/api';
+  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || 'dd2b48e36cf8eb837d7b';
+  const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://www.shipcorrect.com/api';
 
   if (!order_no) return { tracking_status: 'Unknown', scan_stages: [] };
 

@@ -211,7 +211,7 @@ const renderPaymentSelectionPage = async (req, res) => {
         .submit-btn { width: 100%; padding: 18px; border-radius: 12px; background: #10b981; color: #fff; font-size: 16px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
         .submit-btn:hover { background: #059669; }
         .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
-        .error-msg { color: #ef4444; font-size: 14px; font-weight: 600; margin-bottom: 16px; display: none; }
+        .error-msg { color: #b91c1c; background: #fef2f2; border: 1px solid #f87171; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; margin-bottom: 16px; display: none; text-align: left; }
       </style>
     </head>
     <body>
@@ -269,7 +269,7 @@ const renderPaymentSelectionPage = async (req, res) => {
           errorMsg.style.display = 'none';
           
           if (utr.length < 8 || utr.length > 22) {
-            errorMsg.innerText = 'UTR must be 8-22 characters (letters and digits only).';
+            errorMsg.innerText = '❌ UTR must be 8-22 characters (letters and digits only).';
             errorMsg.style.display = 'block';
             return;
           }
@@ -286,17 +286,17 @@ const renderPaymentSelectionPage = async (req, res) => {
             var data = await res.json();
             
             if (res.ok) {
-              btn.innerText = 'Verified! Redirecting...';
+              btn.innerHTML = '✅ Verified! Redirecting... ➔';
               btn.style.background = '#16a34a';
               window.location.href = '/api/orders/status/' + ORDER_ID;
             } else {
-              errorMsg.innerText = data.error || 'Verification failed. Please try again.';
+              errorMsg.innerText = data.error || '❌ Verification failed. Please try again.';
               errorMsg.style.display = 'block';
               btn.disabled = false;
               btn.innerText = 'Verify Payment & Ship Order';
             }
           } catch (e) {
-            errorMsg.innerText = 'Network error. Please check your connection and try again.';
+            errorMsg.innerText = '❌ Network error. Please check your connection and try again.';
             errorMsg.style.display = 'block';
             btn.disabled = false;
             btn.innerText = 'Verify Payment & Ship Order';
@@ -320,14 +320,14 @@ const confirmUtrPayment = async (req, res) => {
     const { utr } = req.body;
     
     if (!utr || utr.length < 8 || utr.length > 22 || !/^[a-zA-Z0-9]+$/.test(utr)) {
-      return res.status(400).json({ error: 'Invalid UTR format. Must be 8-22 letters/digits.' });
+      return res.status(400).json({ error: '❌ Invalid UTR format. Must be 8-22 letters/digits.' });
     }
 
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order) return res.status(404).json({ error: '❌ Order not found' });
 
     if (order.status.toUpperCase() !== 'PENDING' && order.status.toUpperCase() !== 'PENDING VERIFICATION') {
-       return res.status(400).json({ error: 'Order already processed.' });
+       return res.status(400).json({ error: '❌ Order already processed.' });
     }
     
     // Smart Security Check: Duplicate UTR Prevention
@@ -337,7 +337,7 @@ const confirmUtrPayment = async (req, res) => {
     
     if (existingOrder && existingOrder.id !== order.id) {
       console.warn(`[SMART UTR] Spoof detected! UTR ${utr} already used on order ${existingOrder.id}`);
-      return res.status(400).json({ error: 'Duplicate UTR detected! This transaction has already been claimed for another order.' });
+      return res.status(400).json({ error: '❌ Duplicate UTR detected! This transaction has already been claimed for another order.' });
     }
 
     // Since UTR is valid and not a duplicate, we automatically assume it is correct and dispatch!

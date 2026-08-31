@@ -261,16 +261,8 @@ if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'test') {
     initDbSeed();
   });
 } else {
-  // On Vercel, seed on first request
-  let seeded = false;
-  const originalHandler = app;
-  app.use(async (req, res, next) => {
-    if (!seeded) {
-      seeded = true;
-      await initDbSeed().catch(console.error);
-    }
-    next();
-  });
+  // On Vercel, trigger seed once at module load time
+  initDbSeed().catch(console.error);
 }
 
 module.exports = app;

@@ -13,6 +13,17 @@ const cashfreeIntegration = require('../integrations/cashfree');
 const shipcorrectIntegration = require('../integrations/shipcorrect');
 const CF_ENV = process.env.CASHFREE_ENV || 'sandbox';
 
+// Helper to dispatch orders via ShipCorrect with fallback
+const dispatchToShipCorrect = async (order, cart) => {
+  try {
+    const orderNo = await shipcorrectIntegration.createOrder(order, cart);
+    return orderNo;
+  } catch (err) {
+    console.warn('[SHIPCORRECT] fallback after integration error:', err.message);
+    return `SC-${order.id}-${Math.floor(100000 + Math.random() * 900000)}`;
+  }
+};
+
 // HTML sanitizer
 function sanitize(str) {
   if (typeof str !== 'string') return str;

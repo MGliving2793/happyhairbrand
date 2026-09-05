@@ -183,8 +183,8 @@ const renderPaymentSelectionPage = async (req, res) => {
       return res.redirect(`/api/orders/status/${order.id}`);
     }
 
-    const upiId = "7411090509@sbi"; 
-    const merchantName = "Murthy";
+    const upiId = process.env.MERCHANT_UPI_ID || "7411090509@sbi"; 
+    const merchantName = process.env.MERCHANT_NAME || "Murthy";
     const amount = order.total;
     const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
 

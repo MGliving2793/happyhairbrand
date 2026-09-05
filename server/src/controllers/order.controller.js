@@ -183,8 +183,8 @@ const renderPaymentSelectionPage = async (req, res) => {
       return res.redirect(`/api/orders/status/${order.id}`);
     }
 
-    const upiId = process.env.MERCHANT_UPI_ID || "murthyjio7@ibl"; 
-    const merchantName = "Happy Hair";
+    const upiId = "7411090509@sbi"; 
+    const merchantName = "Murthy";
     const amount = order.total;
     const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
 
@@ -217,7 +217,12 @@ const renderPaymentSelectionPage = async (req, res) => {
     <body>
       <div class="portal-card">
         <h1 class="header-title">Secure UPI Payment</h1>
-        <p style="margin-bottom: 20px; color: #64748b; font-size: 15px;">Step 1: Tap a button to pay <b>₹${amount}</b> directly via your UPI app.</p>
+        <p style="margin-bottom: 20px; color: #64748b; font-size: 15px;">Step 1: Scan the QR code or tap a button to pay <b>₹${amount}</b> directly via your UPI app.</p>
+        
+        <div style="text-align: center; margin-bottom: 24px;">
+          <img src="/images/upi_qr.jpg" alt="UPI QR Code" style="max-width: 250px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #10b981;">
+          <div style="margin-top: 12px; font-size: 16px; font-weight: 700; color: #374151;">UPI ID: ${upiId}</div>
+        </div>
         
         <div class="upi-grid">
           <a href="${upiLink}" class="upi-btn">

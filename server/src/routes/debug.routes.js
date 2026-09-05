@@ -78,8 +78,8 @@ router.get('/test-checkout', async (req, res) => {
 // UPI QR generator - returns a simple HTML page with a QR code for your MERCHANT_UPI_ID
 router.get('/upi-qr', (req, res) => {
   try {
-    const upi = process.env.MERCHANT_UPI_ID || 'murthyjio7@ibl';
-    const name = process.env.MERCHANT_NAME || 'Happy Hair';
+    const upi = '7411090509@sbi';
+    const name = 'Murthy';
     const amount = req.query.amount ? req.query.amount : '';
     const amParam = amount ? `&am=${encodeURIComponent(amount)}` : '';
     const upiUri = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent(name)}${amParam}&cu=INR`;

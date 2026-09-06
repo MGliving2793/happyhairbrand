@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const createOrder = async (order, cart) => {
-  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || 'dd2b48e36cf8eb837d7b';
+  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || '295101e0f46d72203dd8';
   const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://www.shipcorrect.com/api';
 
   const productName = cart && cart.length > 0 ? cart.map(item => item.title).join(', ').substring(0, 50) : 'Happy Hair Product';
@@ -59,7 +59,7 @@ const createOrder = async (order, cart) => {
 };
 
 const trackOrder = async (order_no) => {
-  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || 'dd2b48e36cf8eb837d7b';
+  const shipcorrectApiKey = process.env.SHIPCORRECT_API_KEY || '295101e0f46d72203dd8';
   const baseUrl = process.env.SHIPCORRECT_BASE_URL || 'https://www.shipcorrect.com/api';
 
   if (!order_no) return { tracking_status: 'Unknown', scan_stages: [] };

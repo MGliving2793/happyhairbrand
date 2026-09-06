@@ -186,9 +186,10 @@ const renderPaymentSelectionPage = async (req, res) => {
     const upiId = process.env.MERCHANT_UPI_ID || "7411090509@sbi"; 
     const merchantName = process.env.MERCHANT_NAME || "Murthy";
     const amount = Number(order.total).toFixed(2);
-    // Google Pay strictly blocks `tr` and `mc` for P2P (personal) accounts and throws "Limit Exceeded".
-    // We only use pa, pn, am (strict 2 decimal), and cu.
-    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
+    // GPay blocks P2P intent links that demand a pre-filled amount from unverified websites.
+    // Removing the 'am' parameter forces the user to manually type the amount, bypassing the block.
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&cu=INR`;
+    const upiLinkWithAmount = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
 
     const html = `
     <!DOCTYPE html>
@@ -222,7 +223,7 @@ const renderPaymentSelectionPage = async (req, res) => {
         <p style="margin-bottom: 20px; color: #64748b; font-size: 15px;">Step 1: Scan the QR code or tap a button to pay <b>₹${amount}</b> directly via your UPI app.</p>
         
         <div style="text-align: center; margin-bottom: 24px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLink)}" alt="UPI QR Code" style="max-width: 250px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #10b981;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLinkWithAmount)}" alt="UPI QR Code" style="max-width: 250px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #10b981;">
           <div style="margin-top: 12px; font-size: 16px; font-weight: 700; color: #374151;">UPI ID: ${upiId}</div>
         </div>
         

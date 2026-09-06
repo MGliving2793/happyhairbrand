@@ -249,10 +249,10 @@ const renderPaymentSelectionPage = async (req, res) => {
           <div class="utr-title">Step 2: Enter UTR / Reference Number</div>
           <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">After paying, find the UTR/Transaction Reference No. in your payment app (it usually has 12-22 digits/letters) and paste it below.</p>
           
-          <div id="error-msg" class="error-msg"></div>
-          
           <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 427112345678" maxlength="22" style="text-transform:uppercase" oninput="this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()">
           <button id="submit-btn" class="submit-btn" onclick="submitUtr()">Verify Payment & Ship Order</button>
+          <div id="error-msg" class="error-msg" style="margin-top: 16px;"></div>
+          <div id="success-msg" style="display:none; margin-top: 16px; color: #15803d; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; text-align: center;">✅ Payment Verified! Redirecting to order status...</div>
         </div>
 
         <div style="display:flex; align-items:center; gap:12px; margin: 24px 0;">
@@ -271,18 +271,22 @@ const renderPaymentSelectionPage = async (req, res) => {
         async function submitUtr() {
           var utr = document.getElementById('utr-input').value.trim();
           var errorMsg = document.getElementById('error-msg');
+          var successMsg = document.getElementById('success-msg');
           var btn = document.getElementById('submit-btn');
           
           errorMsg.style.display = 'none';
+          successMsg.style.display = 'none';
           
           if (utr.length < 8 || utr.length > 22) {
             errorMsg.innerText = '❌ UTR must be 8-22 characters (letters and digits only).';
             errorMsg.style.display = 'block';
+            errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
           }
 
           btn.disabled = true;
           btn.innerText = 'Verifying...';
+          btn.style.background = '#6366f1';
 
           try {
             var res = await fetch('/api/orders/' + ORDER_ID + '/confirm-utr-payment', {
@@ -293,20 +297,32 @@ const renderPaymentSelectionPage = async (req, res) => {
             var data = await res.json();
             
             if (res.ok) {
-              btn.innerHTML = '✅ Verified! Redirecting... ➔';
+              btn.innerHTML = '✅ Verified! Redirecting...';
               btn.style.background = '#16a34a';
-              window.location.href = '/api/orders/status/' + ORDER_ID;
+              successMsg.style.display = 'block';
+              successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              setTimeout(function() {
+                window.location.href = '/api/orders/status/' + ORDER_ID;
+              }, 1500);
             } else {
-              errorMsg.innerText = data.error || '❌ Verification failed. Please try again.';
+              var errText = data.error || '❌ Verification failed. Please try again.';
+              errorMsg.innerText = errText;
               errorMsg.style.display = 'block';
+              errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
               btn.disabled = false;
               btn.innerText = 'Verify Payment & Ship Order';
+              btn.style.background = '#10b981';
+              alert(errText);
             }
           } catch (e) {
-            errorMsg.innerText = '❌ Network error. Please check your connection and try again.';
+            var networkErr = '❌ Network error. Please check your connection and try again.';
+            errorMsg.innerText = networkErr;
             errorMsg.style.display = 'block';
+            errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
             btn.disabled = false;
             btn.innerText = 'Verify Payment & Ship Order';
+            btn.style.background = '#10b981';
+            alert(networkErr);
           }
         }
       </script>

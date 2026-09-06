@@ -325,19 +325,29 @@ const confirmUtrPayment = async (req, res) => {
   try {
     const { id } = req.params;
     const { utr } = req.body;
+
+    console.log(`[UTR-VERIFY] Starting verification for order ${id}, UTR: ${utr}`);
     
     if (!utr || utr.length < 8 || utr.length > 22 || !/^[a-zA-Z0-9]+$/.test(utr)) {
+      console.log(`[UTR-VERIFY] Invalid UTR format: "${utr}"`);
       return res.status(400).json({ error: '❌ Invalid UTR format. Must be 8-22 letters/digits.' });
     }
 
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
-    if (!order) return res.status(404).json({ error: '❌ Order not found' });
+    if (!order) {
+      console.log(`[UTR-VERIFY] Order ${id} not found`);
+      return res.status(404).json({ error: '❌ Order not found' });
+    }
 
-    if (order.status.toUpperCase() !== 'PENDING' && order.status.toUpperCase() !== 'PENDING VERIFICATION') {
+    console.log(`[UTR-VERIFY] Order ${id} found, status: "${order.status}"`);
+
+    const upperStatus = order.status.toUpperCase();
+    if (upperStatus !== 'PENDING' && upperStatus !== 'PENDING VERIFICATION' && upperStatus !== 'PENDING_VERIFICATION') {
+       console.log(`[UTR-VERIFY] Order ${id} already processed with status: "${order.status}"`);
        return res.status(400).json({ error: '❌ Order already processed.' });
     }
     
-    // Smart Security Check: Duplicate UTR Prevention
+    // Smart Security Check: Duplicate UTR Prevention (but allow re-submitting same UTR for same order)
     const existingOrder = await prisma.order.findFirst({
       where: { utr: utr }
     });
@@ -347,25 +357,40 @@ const confirmUtrPayment = async (req, res) => {
       return res.status(400).json({ error: '❌ Duplicate UTR detected! This transaction has already been claimed for another order.' });
     }
 
-    // Since UTR is valid and not a duplicate, we automatically assume it is correct and dispatch!
-    let cart = [];
-    try { cart = JSON.parse(order.cart_details); } catch(e){}
-
-    // Dispatch to ShipCorrect directly
-    const shipCorrectOrderNo = await dispatchToShipCorrect(order, cart);
-
+    // STEP 1: Immediately update order status and UTR so user gets instant feedback
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: { 
         status: 'Processing', 
-        utr: utr,
-        order_no: shipCorrectOrderNo ? shipCorrectOrderNo.toString() : order.order_no
+        utr: utr
       }
     });
 
+    console.log(`[UTR-VERIFY] Order ${id} updated to Processing with UTR ${utr}`);
+
+    // STEP 2: Send success response IMMEDIATELY (don't wait for ShipCorrect)
     res.json({ message: 'Payment verified and order dispatched!', status: updatedOrder.status });
+
+    // STEP 3: Dispatch to ShipCorrect in background (non-blocking)
+    (async () => {
+      try {
+        let cart = [];
+        try { cart = JSON.parse(order.cart_details); } catch(e){}
+        const shipCorrectOrderNo = await dispatchToShipCorrect(updatedOrder, cart);
+        if (shipCorrectOrderNo) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { order_no: shipCorrectOrderNo.toString() }
+          });
+          console.log(`[UTR-VERIFY] ShipCorrect order created: ${shipCorrectOrderNo} for order ${id}`);
+        }
+      } catch (err) {
+        console.error(`[UTR-VERIFY] Background ShipCorrect dispatch failed for order ${id}:`, err.message);
+      }
+    })();
+
   } catch (error) {
-    console.error('Error confirming UTR:', error);
+    console.error('[UTR-VERIFY] Fatal error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -183,12 +183,12 @@ const renderPaymentSelectionPage = async (req, res) => {
       return res.redirect(`/api/orders/status/${order.id}`);
     }
 
-    const upiId = process.env.MERCHANT_UPI_ID || "7411090509@sbi"; 
+    const upiId = process.env.MERCHANT_UPI_ID || "7411090509@sbi";
     const merchantName = process.env.MERCHANT_NAME || "Murthy";
     const amount = Number(order.total).toFixed(2);
-    // GPay blocks P2P intent links that demand a pre-filled amount from unverified websites.
-    // Removing the 'am' parameter forces the user to manually type the amount, bypassing the block.
-    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&cu=INR`;
+    // User explicitly requested the exact amount to be demanded via the intent link.
+    // NOTE: If GPay blocks this, it is because of the Merchant Account's trust score/tier.
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
     const upiLinkWithAmount = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
 
     const html = `

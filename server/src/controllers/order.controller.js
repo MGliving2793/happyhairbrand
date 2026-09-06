@@ -186,8 +186,9 @@ const renderPaymentSelectionPage = async (req, res) => {
     const upiId = process.env.MERCHANT_UPI_ID || "7411090509@sbi"; 
     const merchantName = process.env.MERCHANT_NAME || "Murthy";
     const amount = Number(order.total).toFixed(2);
-    const tr = `HH${order.id}T${Date.now()}`;
-    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&mc=0000&tr=${tr}&am=${amount}&cu=INR`;
+    // Google Pay strictly blocks `tr` and `mc` for P2P (personal) accounts and throws "Limit Exceeded".
+    // We only use pa, pn, am (strict 2 decimal), and cu.
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
 
     const html = `
     <!DOCTYPE html>

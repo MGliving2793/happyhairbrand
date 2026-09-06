@@ -6,11 +6,13 @@ const productRoutes = require('./product.routes');
 const orderRoutes = require('./order.routes');
 const paymentRoutes = require('./payment.routes');
 const reviewRoutes = require('./review.routes');
+const chatRoutes = require('./chat.routes');
 
 router.use('/auth', authRoutes);
 router.use('/products', productRoutes);
 router.use('/orders', orderRoutes);
 router.use('/payment', paymentRoutes);
 router.use('/reviews', reviewRoutes);
+router.use('/chat', chatRoutes);
 
 module.exports = router;

@@ -185,8 +185,9 @@ const renderPaymentSelectionPage = async (req, res) => {
 
     const upiId = process.env.MERCHANT_UPI_ID || "7411090509@sbi"; 
     const merchantName = process.env.MERCHANT_NAME || "Murthy";
-    const amount = order.total;
-    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
+    const amount = Number(order.total).toFixed(2);
+    const tr = `HH${order.id}T${Date.now()}`;
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&mc=0000&tr=${tr}&am=${amount}&cu=INR`;
 
     const html = `
     <!DOCTYPE html>
@@ -220,7 +221,7 @@ const renderPaymentSelectionPage = async (req, res) => {
         <p style="margin-bottom: 20px; color: #64748b; font-size: 15px;">Step 1: Scan the QR code or tap a button to pay <b>₹${amount}</b> directly via your UPI app.</p>
         
         <div style="text-align: center; margin-bottom: 24px;">
-          <img src="/images/upi_qr.jpg" alt="UPI QR Code" style="max-width: 250px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #10b981;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLink)}" alt="UPI QR Code" style="max-width: 250px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #10b981;">
           <div style="margin-top: 12px; font-size: 16px; font-weight: 700; color: #374151;">UPI ID: ${upiId}</div>
         </div>
         

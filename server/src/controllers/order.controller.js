@@ -177,6 +177,13 @@ const createOrder = async (req, res) => {
 const renderPaymentSelectionPage = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Prevent aggressive mobile caching
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
     if (!order) return res.status(404).send('Order not found');
 
@@ -367,7 +374,7 @@ const renderPaymentSelectionPage = async (req, res) => {
           }
         }
 
-        async function submitReceipt() {
+        function submitReceipt() {
           try {
             var errorMsg = document.getElementById('error-msg');
             var successMsg = document.getElementById('success-msg');
@@ -377,59 +384,61 @@ const renderPaymentSelectionPage = async (req, res) => {
             successMsg.style.display = 'none';
             
             if (!currentBase64) {
-              errorMsg.innerText = '❌ Please wait for the image preview to appear before verifying.';
+              errorMsg.innerText = '❌ Please wait for the image preview to load before verifying.';
               errorMsg.style.display = 'block';
-              errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              alert('Please wait for the image preview to appear before verifying.');
               return;
             }
 
             btn.disabled = true;
-            btn.innerText = 'AI is Verifying (Takes ~5-10s)...';
+            btn.innerText = 'AI is Verifying (Takes ~10s)...';
             btn.style.background = '#6366f1';
 
-            var res = await fetch('/api/orders/' + ORDER_ID + '/verify-receipt', {
+            fetch('/api/orders/' + ORDER_ID + '/verify-receipt', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ imageBase64: currentBase64 })
-            });
-            
-            var data;
-            try {
-              data = await res.json();
-            } catch(jsonErr) {
-              throw new Error('Server returned an invalid response. The file might still be too large for the network.');
-            }
-            
-            if (res.ok && data.success) {
-              btn.innerHTML = '✅ Verified! Redirecting...';
-              btn.style.background = '#16a34a';
-              successMsg.style.display = 'block';
-              successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              setTimeout(function() {
-                window.location.href = '/api/orders/status/' + ORDER_ID;
-              }, 1500);
-            } else {
-              var errText = data.error || data.reason || '❌ Verification failed. Please try again.';
-              errorMsg.innerText = '❌ AI Check Failed: ' + errText;
+            })
+            .then(function(res) {
+              return res.json().then(function(data) {
+                return { ok: res.ok, data: data };
+              }).catch(function() {
+                throw new Error('Server returned an invalid response. Image might be too large.');
+              });
+            })
+            .then(function(result) {
+              if (result.ok && result.data.success) {
+                btn.innerHTML = '✅ Verified! Redirecting...';
+                btn.style.background = '#16a34a';
+                successMsg.style.display = 'block';
+                setTimeout(function() {
+                  window.location.href = '/api/orders/status/' + ORDER_ID;
+                }, 1500);
+              } else {
+                var errText = result.data.error || result.data.reason || 'Verification failed. Please try again.';
+                errorMsg.innerText = '❌ AI Check Failed: ' + errText;
+                errorMsg.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = 'Verify Payment & Ship Order';
+                btn.style.background = '#10b981';
+                alert('AI Check Failed: ' + errText);
+              }
+            })
+            .catch(function(e) {
+              errorMsg.innerText = '❌ ' + e.message;
               errorMsg.style.display = 'block';
-              errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
               btn.disabled = false;
               btn.innerText = 'Verify Payment & Ship Order';
               btn.style.background = '#10b981';
-            }
-          } catch (e) {
-            console.error(e);
-            var networkErr = '❌ ' + e.message;
-            var errorMsg = document.getElementById('error-msg');
+              alert('Network Error: ' + e.message);
+            });
+          } catch (err) {
+            alert('Unexpected Error: ' + err.message);
             var btn = document.getElementById('submit-btn');
-            
-            errorMsg.innerText = networkErr;
-            errorMsg.style.display = 'block';
-            errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            btn.disabled = false;
-            btn.innerText = 'Verify Payment & Ship Order';
-            btn.style.background = '#10b981';
+            if (btn) {
+              btn.disabled = false;
+              btn.innerText = 'Verify Payment & Ship Order';
+            }
           }
         }
       </script>

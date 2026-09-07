@@ -1,6 +1,7 @@
 const axios = require('axios');
 const prisma = require('../db');
 const { sendOrderConfirmationEmail } = require('../utils/mailer');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Simple HTML sanitizer
 function sanitize(str) {
@@ -265,16 +266,18 @@ const renderPaymentSelectionPage = async (req, res) => {
           </div>
           <div class="step">
             <div class="step-num">3</div>
-            <div class="step-text">After payment, find the <b>12-digit UTR number</b> in your payment app and enter it below</div>
+            <div class="step-text">After payment, <b>take a screenshot</b> of the success screen and upload it below</div>
           </div>
         </div>
 
         <div class="utr-section">
-          <div class="utr-title">Enter UTR / Reference Number</div>
-          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">After paying, check your UPI app for the 12-digit UTR/Transaction Reference Number and paste it below.</p>
+          <div class="utr-title">Upload Payment Screenshot</div>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Our AI will automatically verify your payment screenshot in seconds. Make sure the UTR/Reference number and amount are visible.</p>
           
-          <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 427112345678" maxlength="12" style="text-transform:uppercase" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <button id="submit-btn" class="submit-btn" onclick="submitUtr()">Verify Payment & Ship Order</button>
+          <input type="file" id="receipt-upload" accept="image/*" style="margin-bottom: 16px; width: 100%; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 8px; background: #fff; font-size: 14px;" onchange="previewImage(event)">
+          <img id="image-preview" style="display:none; max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto 16px; border: 1px solid #e2e8f0;" />
+          
+          <button id="submit-btn" class="submit-btn" onclick="submitReceipt()">Verify Payment & Ship Order</button>
           <div id="error-msg" class="error-msg" style="margin-top: 16px;"></div>
           <div id="success-msg" style="display:none; margin-top: 16px; color: #15803d; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; text-align: center;">✅ Payment Verified! Redirecting to order status...</div>
         </div>
@@ -292,8 +295,23 @@ const renderPaymentSelectionPage = async (req, res) => {
 
       <script>
         var ORDER_ID = ${order.id};
-        async function submitUtr() {
-          var utr = document.getElementById('utr-input').value.trim();
+        var currentBase64 = null;
+
+        function previewImage(event) {
+          var file = event.target.files[0];
+          if (!file) return;
+
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            currentBase64 = e.target.result;
+            var img = document.getElementById('image-preview');
+            img.src = currentBase64;
+            img.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+
+        async function submitReceipt() {
           var errorMsg = document.getElementById('error-msg');
           var successMsg = document.getElementById('success-msg');
           var btn = document.getElementById('submit-btn');
@@ -301,26 +319,26 @@ const renderPaymentSelectionPage = async (req, res) => {
           errorMsg.style.display = 'none';
           successMsg.style.display = 'none';
           
-          if (utr.length !== 12 || !/^\d{12}$/.test(utr)) {
-            errorMsg.innerText = '❌ Invalid UTR. A valid UPI UTR must be exactly 12 digits.';
+          if (!currentBase64) {
+            errorMsg.innerText = '❌ Please upload a screenshot of your payment first.';
             errorMsg.style.display = 'block';
             errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
           }
 
           btn.disabled = true;
-          btn.innerText = 'Verifying...';
+          btn.innerText = 'AI is Verifying...';
           btn.style.background = '#6366f1';
 
           try {
-            var res = await fetch('/api/orders/' + ORDER_ID + '/confirm-utr-payment', {
+            var res = await fetch('/api/orders/' + ORDER_ID + '/verify-receipt', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ utr: utr })
+              body: JSON.stringify({ imageBase64: currentBase64 })
             });
             var data = await res.json();
             
-            if (res.ok) {
+            if (res.ok && data.success) {
               btn.innerHTML = '✅ Verified! Redirecting...';
               btn.style.background = '#16a34a';
               successMsg.style.display = 'block';
@@ -329,14 +347,13 @@ const renderPaymentSelectionPage = async (req, res) => {
                 window.location.href = '/api/orders/status/' + ORDER_ID;
               }, 1500);
             } else {
-              var errText = data.error || '❌ Verification failed. Please try again.';
-              errorMsg.innerText = errText;
+              var errText = data.error || data.reason || '❌ Verification failed. Please try again or use another method.';
+              errorMsg.innerText = '❌ AI Check Failed: ' + errText;
               errorMsg.style.display = 'block';
               errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
               btn.disabled = false;
               btn.innerText = 'Verify Payment & Ship Order';
               btn.style.background = '#10b981';
-              alert(errText);
             }
           } catch (e) {
             var networkErr = '❌ Network error. Please check your connection and try again.';
@@ -346,7 +363,6 @@ const renderPaymentSelectionPage = async (req, res) => {
             btn.disabled = false;
             btn.innerText = 'Verify Payment & Ship Order';
             btn.style.background = '#10b981';
-            alert(networkErr);
           }
         }
       </script>
@@ -361,43 +377,96 @@ const renderPaymentSelectionPage = async (req, res) => {
 };
 
 
-const confirmUtrPayment = async (req, res) => {
+const verifyReceipt = async (req, res) => {
   try {
     const { id } = req.params;
-    const { utr } = req.body;
+    const { imageBase64 } = req.body;
 
-    console.log(`[UTR-VERIFY] Starting verification for order ${id}, UTR: ${utr}`);
-    
-    if (!utr || utr.length !== 12 || !/^\d{12}$/.test(utr)) {
-      console.log(`[UTR-VERIFY] Invalid UTR format: "${utr}"`);
-      return res.status(400).json({ error: '❌ Invalid UTR format. Must be exactly 12 digits.' });
+    console.log(`[AI-VERIFY] Starting verification for order ${id}`);
+
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'No image provided.' });
     }
 
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
     if (!order) {
-      console.log(`[UTR-VERIFY] Order ${id} not found`);
-      return res.status(404).json({ error: '❌ Order not found' });
+      return res.status(404).json({ error: 'Order not found' });
     }
-
-    console.log(`[UTR-VERIFY] Order ${id} found, status: "${order.status}"`);
 
     const upperStatus = order.status.toUpperCase();
     if (upperStatus !== 'PENDING' && upperStatus !== 'PENDING VERIFICATION' && upperStatus !== 'PENDING_VERIFICATION') {
-       console.log(`[UTR-VERIFY] Order ${id} already processed with status: "${order.status}"`);
-       return res.status(400).json({ error: '❌ Order already processed.' });
+       return res.status(400).json({ error: 'Order already processed.' });
     }
-    
-    // Smart Security Check: Duplicate UTR Prevention (but allow re-submitting same UTR for same order)
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'Server AI configuration missing (GEMINI_API_KEY).' });
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Extract base64 and mimeType
+    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const mimeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+
+    const prompt = `
+      You are an expert payment verifier. Analyze this UPI payment screenshot.
+      The expected payment is to 'Murthy' or UPI ID '7411090509@sbi'.
+      The expected amount is ₹${order.total}.
+      Extract the 12-digit UTR (Transaction/Reference ID).
+      Respond strictly in JSON format without markdown wrapping, like this:
+      {
+        "is_valid": true or false,
+        "utr": "extracted 12-digit UTR or null",
+        "amount": number found,
+        "reason": "short explanation of why it is valid or invalid"
+      }
+      It is valid ONLY if the amount matches exactly and it shows a successful transaction to the correct recipient.
+    `;
+
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: base64Data,
+          mimeType: mimeType
+        }
+      }
+    ]);
+
+    const responseText = result.response.text();
+    let aiResult;
+    try {
+      const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      aiResult = JSON.parse(cleanJson);
+    } catch (err) {
+      console.error("[AI-VERIFY] Failed to parse AI response:", responseText);
+      return res.status(500).json({ error: 'Failed to analyze the screenshot. Please ensure the image is clear.' });
+    }
+
+    console.log(`[AI-VERIFY] AI Result:`, aiResult);
+
+    if (!aiResult.is_valid) {
+      return res.status(400).json({ success: false, reason: aiResult.reason });
+    }
+
+    const utr = aiResult.utr;
+    if (!utr || utr.length !== 12 || !/^\d{12}$/.test(utr)) {
+      return res.status(400).json({ success: false, reason: "AI could not clearly detect a valid 12-digit UTR in the screenshot." });
+    }
+
+    // Smart Security Check: Duplicate UTR Prevention (always need a new photo/transaction)
     const existingOrder = await prisma.order.findFirst({
       where: { utr: utr }
     });
     
     if (existingOrder && existingOrder.id !== order.id) {
-      console.warn(`[SMART UTR] Spoof detected! UTR ${utr} already used on order ${existingOrder.id}`);
-      return res.status(400).json({ error: '❌ Duplicate UTR detected! This transaction has already been claimed for another order.' });
+      console.warn(`[AI-VERIFY] Spoof detected! UTR ${utr} already used on order ${existingOrder.id}`);
+      return res.status(400).json({ error: 'Duplicate transaction detected! This payment screenshot has already been used.' });
     }
 
-    // STEP 1: Immediately update order status and UTR so user gets instant feedback
+    // Update order status and UTR
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: { 
@@ -406,12 +475,11 @@ const confirmUtrPayment = async (req, res) => {
       }
     });
 
-    console.log(`[UTR-VERIFY] Order ${id} updated to Processing with UTR ${utr}`);
+    console.log(`[AI-VERIFY] Order ${id} updated to Processing with UTR ${utr}`);
 
-    // STEP 2: Send success response IMMEDIATELY (don't wait for ShipCorrect)
-    res.json({ message: 'Payment verified and order dispatched!', status: updatedOrder.status });
+    res.json({ success: true, message: 'Payment verified and order dispatched!', status: updatedOrder.status });
 
-    // STEP 3: Dispatch to ShipCorrect in background (non-blocking)
+    // Background ShipCorrect dispatch
     (async () => {
       try {
         let cart = [];
@@ -422,15 +490,15 @@ const confirmUtrPayment = async (req, res) => {
             where: { id: order.id },
             data: { order_no: shipCorrectOrderNo.toString() }
           });
-          console.log(`[UTR-VERIFY] ShipCorrect order created: ${shipCorrectOrderNo} for order ${id}`);
+          console.log(`[AI-VERIFY] ShipCorrect order created: ${shipCorrectOrderNo} for order ${id}`);
         }
       } catch (err) {
-        console.error(`[UTR-VERIFY] Background ShipCorrect dispatch failed for order ${id}:`, err.message);
+        console.error(`[AI-VERIFY] Background ShipCorrect dispatch failed for order ${id}:`, err.message);
       }
     })();
 
   } catch (error) {
-    console.error('[UTR-VERIFY] Fatal error:', error);
+    console.error('[AI-VERIFY] Fatal error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -812,7 +880,7 @@ module.exports = {
   dispatchToShipCorrect,
   renderTrackingPage,
   renderPaymentSelectionPage,
-  confirmUtrPayment,
+  verifyReceipt,
   processCodPayment,
   getAllOrders,
   deleteOrder,

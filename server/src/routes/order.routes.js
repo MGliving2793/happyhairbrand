@@ -8,7 +8,7 @@ router.get('/', authMiddleware, orderController.getAllOrders);
 router.post('/create', validate(schemas.createOrder), orderController.createOrder);
 // Renders the automated Smart UTR input page
 router.get('/pay/:id', orderController.renderPaymentSelectionPage);
-router.post('/:id/confirm-utr-payment', orderController.confirmUtrPayment);
+router.post('/:id/verify-receipt', orderController.verifyReceipt);
 router.get('/:id/cod-confirm', orderController.renderCodConfirmPage);
 router.post('/:id/pay-cod', orderController.processCodPayment);
 router.post('/approve', authMiddleware, orderController.approveOrder);

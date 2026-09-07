@@ -192,8 +192,7 @@ const renderPaymentSelectionPage = async (req, res) => {
     const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&mc=0000&tr=${tr}&cu=INR`;
     const upiLinkWithAmount = upiLink;
     
-    // Explicit Google Pay Android Intent (helps bypass generic browser handler blocks)
-    const gpayIntent = `intent://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&mc=0000&tr=${tr}&cu=INR#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;S.browser_fallback_url=${encodeURIComponent(upiLink)};end`;
+    // QR-only approach: no app intent links (they cause "limit exceeded" errors in GPay)
 
     const html = `
     <!DOCTYPE html>
@@ -206,12 +205,20 @@ const renderPaymentSelectionPage = async (req, res) => {
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: #fbf9f6; color: #3d2f25; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
-        .portal-card { background: #fff; width: 100%; max-width: 480px; border-radius: 24px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); border: 1px solid #f0ebe1; }
-        .header-title { font-size: 24px; font-weight: 700; color: #4a3b32; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
-        .upi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-        .upi-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; text-decoration: none; color: #4b5563; font-size: 13px; font-weight: 600; transition: all 0.2s; background: #fff; }
-        .upi-btn:hover { border-color: #10b981; background: #ecfdf5; }
-        .utr-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; text-align: center; }
+        .portal-card { background: #fff; width: 100%; max-width: 480px; border-radius: 24px; padding: 28px 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); border: 1px solid #f0ebe1; }
+        .header-title { font-size: 22px; font-weight: 700; color: #4a3b32; margin-bottom: 8px; text-align: center; }
+        .amount-badge { text-align: center; font-size: 32px; font-weight: 800; color: #10b981; margin-bottom: 20px; }
+        .qr-box { text-align: center; background: #f0fdf4; border: 2px solid #10b981; border-radius: 20px; padding: 24px 16px; margin-bottom: 24px; }
+        .qr-box img { width: 260px; max-width: 100%; border-radius: 12px; }
+        .qr-label { margin-top: 14px; font-size: 14px; font-weight: 600; color: #374151; }
+        .qr-sublabel { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        .steps-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 24px; }
+        .step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .step:last-child { margin-bottom: 0; }
+        .step-num { min-width: 28px; height: 28px; border-radius: 50%; background: #10b981; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+        .step-text { font-size: 14px; color: #475569; line-height: 1.5; }
+        .step-text b { color: #1e293b; }
+        .utr-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; }
         .utr-title { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
         .utr-input { width: 100%; padding: 16px; border: 2px solid #cbd5e1; border-radius: 12px; font-size: 18px; font-weight: 700; color: #334155; text-align: center; letter-spacing: 2px; outline: none; margin-bottom: 16px; transition: 0.2s; }
         .utr-input:focus { border-color: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,0.1); }
@@ -219,40 +226,52 @@ const renderPaymentSelectionPage = async (req, res) => {
         .submit-btn:hover { background: #059669; }
         .submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
         .error-msg { color: #b91c1c; background: #fef2f2; border: 1px solid #f87171; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; margin-bottom: 16px; display: none; text-align: left; }
+        .upi-id-box { display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 16px; margin-top: 14px; }
+        .upi-id-box span { font-size: 15px; font-weight: 700; color: #1e293b; letter-spacing: 0.5px; }
+        .copy-btn { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #4b5563; cursor: pointer; }
+        .copy-btn:hover { background: #e5e7eb; }
+        .pay-now-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 18px; border-radius: 14px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-size: 18px; font-weight: 800; text-decoration: none; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(16,185,129,0.35); transition: all 0.2s; }
+        .pay-now-btn:hover { background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 6px 20px rgba(16,185,129,0.5); transform: translateY(-1px); }
       </style>
     </head>
     <body>
       <div class="portal-card">
-        <h1 class="header-title">Secure UPI Payment</h1>
-        <p style="margin-bottom: 20px; color: #64748b; font-size: 15px;">Step 1: Scan the QR code or tap a button to pay <b>₹${amount}</b> directly via your UPI app.</p>
+        <h1 class="header-title">Scan & Pay with Any UPI App</h1>
+        <div class="amount-badge">₹${amount}</div>
         
-        <div style="text-align: center; margin-bottom: 24px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLinkWithAmount)}" alt="UPI QR Code" style="max-width: 250px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #10b981;">
-          <div style="margin-top: 12px; font-size: 16px; font-weight: 700; color: #374151;">UPI ID: ${upiId}</div>
+        <div class="qr-box">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLinkWithAmount)}" alt="UPI QR Code">
+          <div class="qr-label">Open <b>Google Pay</b>, <b>PhonePe</b>, <b>Paytm</b> or any UPI app</div>
+          <div class="qr-sublabel">Tap the QR scanner inside the app → Scan this code → Pay</div>
+          <div class="upi-id-box">
+            <span>${upiId}</span>
+            <button class="copy-btn" onclick="navigator.clipboard.writeText('${upiId}'); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy',1500)">Copy</button>
+          </div>
         </div>
-        
-        <div class="upi-grid">
-          <a href="${gpayIntent}" class="upi-btn">
-            <span style="font-size: 24px; margin-bottom: 8px;">💳</span>
-            Google Pay
-          </a>
-          <a href="${upiLink}" class="upi-btn">
-            <span style="font-size: 24px; margin-bottom: 8px;">🟣</span>
-            PhonePe
-          </a>
-          <a href="${upiLink}" class="upi-btn">
-            <span style="font-size: 24px; margin-bottom: 8px;">💳</span>
-            Paytm
-          </a>
-          <a href="${upiLink}" class="upi-btn">
-            <span style="font-size: 24px; margin-bottom: 8px;">🏦</span>
-            Any UPI App
-          </a>
+
+        <a href="${upiLink}" class="pay-now-btn">
+          💳 Pay Now ₹${amount}
+        </a>
+        <div style="text-align:center; margin-bottom:24px; font-size:12px; color:#9ca3af;">Tap above to open your UPI app directly (works on mobile)</div>
+
+        <div class="steps-box">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-text">Open <b>Google Pay / PhonePe / Paytm</b> and tap the <b>QR scanner</b> icon</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text"><b>Scan the QR code</b> above and complete the payment of <b>₹${amount}</b></div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-text">After payment, find the <b>12-digit UTR number</b> in your payment app and enter it below</div>
+          </div>
         </div>
 
         <div class="utr-section">
-          <div class="utr-title">Step 2: Enter UTR / Reference Number</div>
-          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">After paying, find the UTR/Transaction Reference No. in your payment app (it usually has 12-22 digits/letters) and paste it below.</p>
+          <div class="utr-title">Enter UTR / Reference Number</div>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">After paying, check your UPI app for the 12-digit UTR/Transaction Reference Number and paste it below.</p>
           
           <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 427112345678" maxlength="12" style="text-transform:uppercase" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           <button id="submit-btn" class="submit-btn" onclick="submitUtr()">Verify Payment & Ship Order</button>

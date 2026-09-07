@@ -254,7 +254,7 @@ const renderPaymentSelectionPage = async (req, res) => {
           <div class="utr-title">Step 2: Enter UTR / Reference Number</div>
           <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">After paying, find the UTR/Transaction Reference No. in your payment app (it usually has 12-22 digits/letters) and paste it below.</p>
           
-          <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 427112345678" maxlength="22" style="text-transform:uppercase" oninput="this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()">
+          <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 427112345678" maxlength="12" style="text-transform:uppercase" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           <button id="submit-btn" class="submit-btn" onclick="submitUtr()">Verify Payment & Ship Order</button>
           <div id="error-msg" class="error-msg" style="margin-top: 16px;"></div>
           <div id="success-msg" style="display:none; margin-top: 16px; color: #15803d; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; text-align: center;">✅ Payment Verified! Redirecting to order status...</div>
@@ -282,8 +282,8 @@ const renderPaymentSelectionPage = async (req, res) => {
           errorMsg.style.display = 'none';
           successMsg.style.display = 'none';
           
-          if (utr.length < 8 || utr.length > 22) {
-            errorMsg.innerText = '❌ UTR must be 8-22 characters (letters and digits only).';
+          if (utr.length !== 12 || !/^\d{12}$/.test(utr)) {
+            errorMsg.innerText = '❌ Invalid UTR. A valid UPI UTR must be exactly 12 digits.';
             errorMsg.style.display = 'block';
             errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
@@ -349,9 +349,9 @@ const confirmUtrPayment = async (req, res) => {
 
     console.log(`[UTR-VERIFY] Starting verification for order ${id}, UTR: ${utr}`);
     
-    if (!utr || utr.length < 8 || utr.length > 22 || !/^[a-zA-Z0-9]+$/.test(utr)) {
+    if (!utr || utr.length !== 12 || !/^\d{12}$/.test(utr)) {
       console.log(`[UTR-VERIFY] Invalid UTR format: "${utr}"`);
-      return res.status(400).json({ error: '❌ Invalid UTR format. Must be 8-22 letters/digits.' });
+      return res.status(400).json({ error: '❌ Invalid UTR format. Must be exactly 12 digits.' });
     }
 
     const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });

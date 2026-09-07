@@ -298,60 +298,73 @@ const renderPaymentSelectionPage = async (req, res) => {
         var currentBase64 = null;
 
         function previewImage(event) {
-          var file = event.target.files[0];
-          if (!file) return;
+          try {
+            var file = event.target.files[0];
+            if (!file) return;
 
-          var imgElem = document.getElementById('image-preview');
-          var errorMsg = document.getElementById('error-msg');
-          
-          errorMsg.style.display = 'none';
-          
-          // Show a temporary loading state
-          imgElem.style.display = 'block';
-          imgElem.src = 'https://i.gifer.com/ZKZg.gif'; // Simple loading spinner
-          
-          var reader = new FileReader();
-          reader.onload = function(e) {
-            var img = new Image();
-            img.onload = function() {
-              var canvas = document.createElement('canvas');
-              var ctx = canvas.getContext('2d');
-              
-              // Max dimensions for AI (1024x1024 is plenty)
-              var MAX_WIDTH = 1024;
-              var MAX_HEIGHT = 1024;
-              var width = img.width;
-              var height = img.height;
+            var imgElem = document.getElementById('image-preview');
+            var errorMsg = document.getElementById('error-msg');
+            errorMsg.style.display = 'none';
+            
+            imgElem.style.display = 'block';
+            imgElem.src = 'https://i.gifer.com/ZKZg.gif';
+            
+            var reader = new FileReader();
+            reader.onload = function(e) {
+              var img = new Image();
+              img.onload = function() {
+                try {
+                  var canvas = document.createElement('canvas');
+                  var ctx = canvas.getContext('2d');
+                  
+                  var MAX_WIDTH = 1000;
+                  var MAX_HEIGHT = 1000;
+                  var width = img.width;
+                  var height = img.height;
 
-              if (width > height) {
-                if (width > MAX_WIDTH) {
-                  height *= MAX_WIDTH / width;
-                  width = MAX_WIDTH;
+                  if (width > height) {
+                    if (width > MAX_WIDTH) {
+                      height *= MAX_WIDTH / width;
+                      width = MAX_WIDTH;
+                    }
+                  } else {
+                    if (height > MAX_HEIGHT) {
+                      width *= MAX_HEIGHT / height;
+                      height = MAX_HEIGHT;
+                    }
+                  }
+
+                  canvas.width = width;
+                  canvas.height = height;
+                  ctx.drawImage(img, 0, 0, width, height);
+
+                  currentBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                  imgElem.src = currentBase64;
+                } catch(canvasErr) {
+                  // Fallback if canvas fails
+                  console.error('Canvas compression failed:', canvasErr);
+                  currentBase64 = e.target.result;
+                  imgElem.src = currentBase64;
                 }
-              } else {
-                if (height > MAX_HEIGHT) {
-                  width *= MAX_HEIGHT / height;
-                  height = MAX_HEIGHT;
-                }
-              }
-
-              canvas.width = width;
-              canvas.height = height;
-              ctx.drawImage(img, 0, 0, width, height);
-
-              // Compress to JPEG with 0.7 quality
-              currentBase64 = canvas.toDataURL('image/jpeg', 0.7);
-              imgElem.src = currentBase64;
+              };
+              img.onerror = function() {
+                errorMsg.innerText = '❌ Failed to load image preview.';
+                errorMsg.style.display = 'block';
+                imgElem.style.display = 'none';
+                currentBase64 = null;
+              };
+              img.src = e.target.result;
             };
-            img.onerror = function() {
-              errorMsg.innerText = '❌ Failed to read the image file. Please try another screenshot.';
+            reader.onerror = function() {
+              errorMsg.innerText = '❌ Failed to read file.';
               errorMsg.style.display = 'block';
               imgElem.style.display = 'none';
               currentBase64 = null;
             };
-            img.src = e.target.result;
-          };
-          reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+          } catch(err) {
+            alert("Error in preview: " + err.message);
+          }
         }
 
         async function submitReceipt() {
@@ -364,14 +377,14 @@ const renderPaymentSelectionPage = async (req, res) => {
             successMsg.style.display = 'none';
             
             if (!currentBase64) {
-              errorMsg.innerText = '❌ Please upload a screenshot of your payment first (wait for it to appear on screen).';
+              errorMsg.innerText = '❌ Please wait for the image preview to appear before verifying.';
               errorMsg.style.display = 'block';
               errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
               return;
             }
 
             btn.disabled = true;
-            btn.innerText = 'AI is Verifying (Takes ~5s)...';
+            btn.innerText = 'AI is Verifying (Takes ~5-10s)...';
             btn.style.background = '#6366f1';
 
             var res = await fetch('/api/orders/' + ORDER_ID + '/verify-receipt', {
@@ -384,7 +397,7 @@ const renderPaymentSelectionPage = async (req, res) => {
             try {
               data = await res.json();
             } catch(jsonErr) {
-              throw new Error('Server returned an invalid response. File might be too large.');
+              throw new Error('Server returned an invalid response. The file might still be too large for the network.');
             }
             
             if (res.ok && data.success) {
@@ -406,7 +419,7 @@ const renderPaymentSelectionPage = async (req, res) => {
             }
           } catch (e) {
             console.error(e);
-            var networkErr = '❌ Network error or file too large. Try taking a new smaller screenshot.';
+            var networkErr = '❌ ' + e.message;
             var errorMsg = document.getElementById('error-msg');
             var btn = document.getElementById('submit-btn');
             

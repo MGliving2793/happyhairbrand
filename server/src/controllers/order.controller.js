@@ -281,10 +281,10 @@ const renderPaymentSelectionPage = async (req, res) => {
           <div class="utr-title">Upload Payment Screenshot</div>
           <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Our AI will automatically verify your payment screenshot in seconds. Make sure the UTR/Reference number and amount are visible.</p>
           
-          <input type="file" id="receipt-upload" accept="image/*" style="margin-bottom: 16px; width: 100%; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 8px; background: #fff; font-size: 14px;" onchange="previewImage(event)">
+          <input type="file" id="receipt-upload" accept="image/*" style="margin-bottom: 16px; width: 100%; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 8px; background: #fff; font-size: 14px;">
           <img id="image-preview" style="display:none; max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto 16px; border: 1px solid #e2e8f0;" />
           
-          <button id="submit-btn" class="submit-btn" onclick="submitReceipt()">Verify Payment & Ship Order</button>
+          <button id="submit-btn" class="submit-btn">Verify Payment & Ship Order</button>
           <div id="error-msg" class="error-msg" style="margin-top: 16px;"></div>
           <div id="success-msg" style="display:none; margin-top: 16px; color: #15803d; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; text-align: center;">✅ Payment Verified! Redirecting to order status...</div>
         </div>
@@ -300,150 +300,155 @@ const renderPaymentSelectionPage = async (req, res) => {
         </a>
       </div>
 
-      <script>
-        var ORDER_ID = ${order.id};
-        var currentBase64 = null;
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            try {
+              var ORDER_ID = "${order.id}";
+              var currentBase64 = null;
+              
+              var fileInput = document.getElementById('receipt-upload');
+              var submitBtn = document.getElementById('submit-btn');
+              var imgElem = document.getElementById('image-preview');
+              var errorMsg = document.getElementById('error-msg');
+              var successMsg = document.getElementById('success-msg');
 
-        function previewImage(event) {
-          try {
-            var file = event.target.files[0];
-            if (!file) return;
+              if (fileInput) {
+                fileInput.addEventListener('change', function(event) {
+                  try {
+                    var file = event.target.files[0];
+                    if (!file) return;
 
-            var imgElem = document.getElementById('image-preview');
-            var errorMsg = document.getElementById('error-msg');
-            errorMsg.style.display = 'none';
-            
-            imgElem.style.display = 'block';
-            imgElem.src = 'https://i.gifer.com/ZKZg.gif';
-            
-            var reader = new FileReader();
-            reader.onload = function(e) {
-              var img = new Image();
-              img.onload = function() {
-                try {
-                  var canvas = document.createElement('canvas');
-                  var ctx = canvas.getContext('2d');
-                  
-                  var MAX_WIDTH = 1000;
-                  var MAX_HEIGHT = 1000;
-                  var width = img.width;
-                  var height = img.height;
+                    errorMsg.style.display = 'none';
+                    imgElem.style.display = 'block';
+                    imgElem.src = 'https://i.gifer.com/ZKZg.gif';
+                    
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                      var img = new Image();
+                      img.onload = function() {
+                        try {
+                          var canvas = document.createElement('canvas');
+                          var ctx = canvas.getContext('2d');
+                          
+                          var MAX_WIDTH = 1000;
+                          var MAX_HEIGHT = 1000;
+                          var width = img.width;
+                          var height = img.height;
 
-                  if (width > height) {
-                    if (width > MAX_WIDTH) {
-                      height *= MAX_WIDTH / width;
-                      width = MAX_WIDTH;
-                    }
-                  } else {
-                    if (height > MAX_HEIGHT) {
-                      width *= MAX_HEIGHT / height;
-                      height = MAX_HEIGHT;
-                    }
+                          if (width > height) {
+                            if (width > MAX_WIDTH) {
+                              height *= MAX_WIDTH / width;
+                              width = MAX_WIDTH;
+                            }
+                          } else {
+                            if (height > MAX_HEIGHT) {
+                              width *= MAX_HEIGHT / height;
+                              height = MAX_HEIGHT;
+                            }
+                          }
+
+                          canvas.width = width;
+                          canvas.height = height;
+                          ctx.drawImage(img, 0, 0, width, height);
+
+                          currentBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                          imgElem.src = currentBase64;
+                        } catch(canvasErr) {
+                          console.error('Canvas compression failed:', canvasErr);
+                          currentBase64 = e.target.result;
+                          imgElem.src = currentBase64;
+                        }
+                      };
+                      img.onerror = function() {
+                        errorMsg.innerText = '❌ Failed to load image preview.';
+                        errorMsg.style.display = 'block';
+                        imgElem.style.display = 'none';
+                        currentBase64 = null;
+                      };
+                      img.src = e.target.result;
+                    };
+                    reader.onerror = function() {
+                      errorMsg.innerText = '❌ Failed to read file.';
+                      errorMsg.style.display = 'block';
+                      imgElem.style.display = 'none';
+                      currentBase64 = null;
+                    };
+                    reader.readAsDataURL(file);
+                  } catch(err) {
+                    alert("Error in preview: " + err.message);
                   }
-
-                  canvas.width = width;
-                  canvas.height = height;
-                  ctx.drawImage(img, 0, 0, width, height);
-
-                  currentBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                  imgElem.src = currentBase64;
-                } catch(canvasErr) {
-                  // Fallback if canvas fails
-                  console.error('Canvas compression failed:', canvasErr);
-                  currentBase64 = e.target.result;
-                  imgElem.src = currentBase64;
-                }
-              };
-              img.onerror = function() {
-                errorMsg.innerText = '❌ Failed to load image preview.';
-                errorMsg.style.display = 'block';
-                imgElem.style.display = 'none';
-                currentBase64 = null;
-              };
-              img.src = e.target.result;
-            };
-            reader.onerror = function() {
-              errorMsg.innerText = '❌ Failed to read file.';
-              errorMsg.style.display = 'block';
-              imgElem.style.display = 'none';
-              currentBase64 = null;
-            };
-            reader.readAsDataURL(file);
-          } catch(err) {
-            alert("Error in preview: " + err.message);
-          }
-        }
-
-        function submitReceipt() {
-          try {
-            var errorMsg = document.getElementById('error-msg');
-            var successMsg = document.getElementById('success-msg');
-            var btn = document.getElementById('submit-btn');
-            
-            errorMsg.style.display = 'none';
-            successMsg.style.display = 'none';
-            
-            if (!currentBase64) {
-              errorMsg.innerText = '❌ Please wait for the image preview to load before verifying.';
-              errorMsg.style.display = 'block';
-              alert('Please wait for the image preview to appear before verifying.');
-              return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = 'AI is Verifying (Takes ~10s)...';
-            btn.style.background = '#6366f1';
-
-            fetch('/api/orders/' + ORDER_ID + '/verify-receipt', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ imageBase64: currentBase64 })
-            })
-            .then(function(res) {
-              return res.json().then(function(data) {
-                return { ok: res.ok, data: data };
-              }).catch(function() {
-                throw new Error('Server returned an invalid response. Image might be too large.');
-              });
-            })
-            .then(function(result) {
-              if (result.ok && result.data.success) {
-                btn.innerHTML = '✅ Verified! Redirecting...';
-                btn.style.background = '#16a34a';
-                successMsg.style.display = 'block';
-                setTimeout(function() {
-                  window.location.href = '/api/orders/status/' + ORDER_ID;
-                }, 1500);
-              } else {
-                var errText = result.data.error || result.data.reason || 'Verification failed. Please try again.';
-                errorMsg.innerText = '❌ AI Check Failed: ' + errText;
-                errorMsg.style.display = 'block';
-                btn.disabled = false;
-                btn.innerText = 'Verify Payment & Ship Order';
-                btn.style.background = '#10b981';
-                alert('AI Check Failed: ' + errText);
+                });
               }
-            })
-            .catch(function(e) {
-              errorMsg.innerText = '❌ ' + e.message;
-              errorMsg.style.display = 'block';
-              btn.disabled = false;
-              btn.innerText = 'Verify Payment & Ship Order';
-              btn.style.background = '#10b981';
-              alert('Network Error: ' + e.message);
-            });
-          } catch (err) {
-            alert('Unexpected Error: ' + err.message);
-            var btn = document.getElementById('submit-btn');
-            if (btn) {
-              btn.disabled = false;
-              btn.innerText = 'Verify Payment & Ship Order';
+
+              if (submitBtn) {
+                submitBtn.addEventListener('click', function() {
+                  try {
+                    errorMsg.style.display = 'none';
+                    successMsg.style.display = 'none';
+                    
+                    if (!currentBase64) {
+                      errorMsg.innerText = '❌ Please wait for the image preview to load before verifying.';
+                      errorMsg.style.display = 'block';
+                      alert('Please wait for the image preview to appear before verifying.');
+                      return;
+                    }
+
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = 'AI is Verifying (Takes ~10s)...';
+                    submitBtn.style.background = '#6366f1';
+
+                    fetch('/api/orders/' + ORDER_ID + '/verify-receipt', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ imageBase64: currentBase64 })
+                    })
+                    .then(function(res) {
+                      return res.json().then(function(data) {
+                        return { ok: res.ok, data: data };
+                      }).catch(function() {
+                        throw new Error('Server returned an invalid response. Image might be too large.');
+                      });
+                    })
+                    .then(function(result) {
+                      if (result.ok && result.data.success) {
+                        submitBtn.innerHTML = '✅ Verified! Redirecting...';
+                        submitBtn.style.background = '#16a34a';
+                        successMsg.style.display = 'block';
+                        setTimeout(function() {
+                          window.location.href = '/api/orders/status/' + ORDER_ID;
+                        }, 1500);
+                      } else {
+                        var errText = result.data.error || result.data.reason || 'Verification failed. Please try again.';
+                        errorMsg.innerText = '❌ AI Check Failed: ' + errText;
+                        errorMsg.style.display = 'block';
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = 'Verify Payment & Ship Order';
+                        submitBtn.style.background = '#10b981';
+                        alert('AI Check Failed: ' + errText);
+                      }
+                    })
+                    .catch(function(e) {
+                      errorMsg.innerText = '❌ ' + e.message;
+                      errorMsg.style.display = 'block';
+                      submitBtn.disabled = false;
+                      submitBtn.innerText = 'Verify Payment & Ship Order';
+                      submitBtn.style.background = '#10b981';
+                      alert('Network Error: ' + e.message);
+                    });
+                  } catch (err) {
+                    alert('Unexpected Error: ' + err.message);
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Verify Payment & Ship Order';
+                  }
+                });
+              }
+            } catch (initErr) {
+              alert("Script initialization error: " + initErr.message);
             }
-          }
-        }
-      </script>
-    </body>
-    </html>
+          });
+        </script>
+      </body>
+      </html>
     `;
     res.send(html);
   } catch (error) {

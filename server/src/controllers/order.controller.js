@@ -558,25 +558,25 @@ const verifyReceipt = async (req, res) => {
 
     console.log(`[AI-VERIFY] Order ${id} updated to Processing with UTR ${utr}`);
 
-    res.json({ success: true, message: 'Payment verified and order dispatched!', status: updatedOrder.status });
-
-    // Background ShipCorrect dispatch
-    (async () => {
-      try {
-        let cart = [];
-        try { cart = JSON.parse(order.cart_details); } catch(e){}
-        const shipCorrectOrderNo = await dispatchToShipCorrect(updatedOrder, cart);
-        if (shipCorrectOrderNo) {
-          await prisma.order.update({
-            where: { id: order.id },
-            data: { order_no: shipCorrectOrderNo.toString() }
-          });
-          console.log(`[AI-VERIFY] ShipCorrect order created: ${shipCorrectOrderNo} for order ${id}`);
-        }
-      } catch (err) {
-        console.error(`[AI-VERIFY] Background ShipCorrect dispatch failed for order ${id}:`, err.message);
+    // Await ShipCorrect dispatch before returning, otherwise Vercel kills the background process!
+    try {
+      let cart = [];
+      try { cart = JSON.parse(order.cart_details); } catch(e){}
+      const shipCorrectOrderNo = await dispatchToShipCorrect(updatedOrder, cart);
+      if (shipCorrectOrderNo) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { order_no: shipCorrectOrderNo.toString() }
+        });
+        console.log(`[AI-VERIFY] ShipCorrect order created: ${shipCorrectOrderNo} for order ${id}`);
       }
-    })();
+    } catch (err) {
+      console.error(`[AI-VERIFY] ShipCorrect dispatch failed for order ${id}:`, err.message);
+      // We still return success for the payment verification even if dispatch fails, 
+      // but the admin will need to dispatch manually.
+    }
+
+    res.json({ success: true, message: 'Payment verified and order dispatched!', status: updatedOrder.status });
 
   } catch (error) {
     console.error('[AI-VERIFY] Fatal error:', error);
@@ -606,21 +606,18 @@ const processCodPayment = async (req, res) => {
     let cart = [];
     try { cart = JSON.parse(order.cart_details); } catch(e){}
 
-    // Async dispatch to ShipCorrect
-    (async () => {
-      try {
-        const shipCorrectOrderNo = await dispatchToShipCorrect(updatedOrder, cart);
-        if (shipCorrectOrderNo) {
-          await prisma.order.update({
-            where: { id: updatedOrder.id },
-            data: { order_no: shipCorrectOrderNo.toString() }
-          });
-        }
-        // sendOrderConfirmationEmail(updatedOrder, shipCorrectOrderNo).catch(e => console.warn('[MAILER]', e.message));
-      } catch (err) {
-        console.error('[BACKGROUND SC]', err);
+    // Await ShipCorrect dispatch so Vercel doesn't kill the lambda immediately
+    try {
+      const shipCorrectOrderNo = await dispatchToShipCorrect(updatedOrder, cart);
+      if (shipCorrectOrderNo) {
+        await prisma.order.update({
+          where: { id: updatedOrder.id },
+          data: { order_no: shipCorrectOrderNo.toString() }
+        });
       }
-    })();
+    } catch (err) {
+      console.error('[BACKGROUND SC]', err);
+    }
 
     res.redirect('/api/orders/status/' + updatedOrder.id);
   } catch (error) {

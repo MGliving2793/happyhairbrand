@@ -239,18 +239,17 @@ const renderPaymentSelectionPage = async (req, res) => {
         .copy-btn { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #4b5563; cursor: pointer; }
         .copy-btn:hover { background: #e5e7eb; }
         .pay-now-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 18px; border-radius: 14px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-size: 18px; font-weight: 800; text-decoration: none; text-align: center; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(16,185,129,0.35); transition: all 0.2s; }
-        .pay-now-btn:hover { background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 6px 20px rgba(16,185,129,0.5); transform: translateY(-1px); }
       </style>
     </head>
     <body>
       <div class="portal-card">
-        <h1 class="header-title">Scan & Pay with Any UPI App</h1>
+        <h1 class="header-title">Scan QR to Pay securely</h1>
         <div class="amount-badge">₹${amount}</div>
         
         <div class="qr-box">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLinkWithAmount)}" alt="UPI QR Code">
-          <div class="qr-label">Open <b>Google Pay</b>, <b>PhonePe</b>, <b>Paytm</b> or any UPI app</div>
-          <div class="qr-sublabel">Tap the QR scanner inside the app → Scan this code → Pay</div>
+          <div class="qr-label">Scan with any UPI App</div>
+          <div class="qr-sublabel">(GPay, PhonePe, Paytm, etc.)</div>
           <div class="upi-id-box">
             <span>${upiId}</span>
             <button class="copy-btn" onclick="navigator.clipboard.writeText('${upiId}'); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy',1500)">Copy</button>
@@ -492,18 +491,22 @@ const verifyReceipt = async (req, res) => {
     const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
     const prompt = `
-      You are an expert payment verifier. Analyze this UPI payment screenshot.
-      The expected payment is to 'Murthy' or UPI ID '7411090509@sbi'.
-      The expected amount is ₹${order.total}.
-      Extract the 12-digit UTR (Transaction/Reference ID).
-      Respond strictly in JSON format without markdown wrapping, like this:
+      You are an expert fraud-detection AI and payment verifier. Analyze this UPI payment screenshot.
+      
+      STRICT REQUIREMENTS FOR VALIDITY:
+      1. Recipient Name MUST perfectly contain 'Murthy' OR the UPI ID MUST be '7411090509@sbi'. If it was paid to any other person, mark it invalid immediately.
+      2. The payment amount MUST be exactly ₹${order.total}.
+      3. The transaction MUST be marked as 'Successful' or 'Completed'.
+      4. You MUST extract the exact 12-digit UTR (also known as UPI Reference Number or Transaction ID).
+      
+      Respond STRICTLY in JSON format without markdown wrapping, like this:
       {
         "is_valid": true or false,
         "utr": "extracted 12-digit UTR or null",
         "amount": number found,
         "reason": "short explanation of why it is valid or invalid"
       }
-      It is valid ONLY if the amount matches exactly and it shows a successful transaction to the correct recipient.
+      If any of the strict requirements are not met, you MUST set "is_valid": false and state the reason.
     `;
 
     const result = await model.generateContent([

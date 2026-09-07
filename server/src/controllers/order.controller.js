@@ -186,10 +186,14 @@ const renderPaymentSelectionPage = async (req, res) => {
     const upiId = process.env.MERCHANT_UPI_ID || "7411090509@sbi";
     const merchantName = process.env.MERCHANT_NAME || "Murthy";
     const amount = Number(order.total).toFixed(2);
-    // User explicitly requested the exact amount to be demanded via the intent link.
-    // NOTE: If GPay blocks this, it is because of the Merchant Account's trust score/tier.
-    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
-    const upiLinkWithAmount = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`;
+    const tr = `HH${order.id}T${Date.now()}`;
+    
+    // Standard generic intent (for QR, PhonePe, Paytm, etc)
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&mc=0000&tr=${tr}&cu=INR`;
+    const upiLinkWithAmount = upiLink;
+    
+    // Explicit Google Pay Android Intent (helps bypass generic browser handler blocks)
+    const gpayIntent = `intent://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&mc=0000&tr=${tr}&cu=INR#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;S.browser_fallback_url=${encodeURIComponent(upiLink)};end`;
 
     const html = `
     <!DOCTYPE html>
@@ -228,8 +232,8 @@ const renderPaymentSelectionPage = async (req, res) => {
         </div>
         
         <div class="upi-grid">
-          <a href="${upiLink}" class="upi-btn">
-            <span style="font-size: 24px; margin-bottom: 8px;">📱</span>
+          <a href="${gpayIntent}" class="upi-btn">
+            <span style="font-size: 24px; margin-bottom: 8px;">💳</span>
             Google Pay
           </a>
           <a href="${upiLink}" class="upi-btn">
